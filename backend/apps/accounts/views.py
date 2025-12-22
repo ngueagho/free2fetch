@@ -334,19 +334,69 @@ class UdemyAuthView(APIView):
 
     def get(self, request):
         """Get Udemy OAuth URL"""
-        # TODO: Generate Udemy OAuth URL
-        oauth_url = "https://www.udemy.com/oauth2/authorize"
-        return Response({'oauth_url': oauth_url})
+        from .oauth import get_udemy_service
+        import uuid
+
+        udemy_service = get_udemy_service()
+
+        # Generate state parameter for security
+        state = str(uuid.uuid4())
+        request.session['oauth_state'] = state
+
+        oauth_url = udemy_service.get_authorization_url(state=state)
+
+        return Response({
+            'oauth_url': oauth_url,
+            'state': state
+        })
 
     def post(self, request):
         """Handle Udemy OAuth callback"""
+        from .oauth import get_udemy_service
+        from ..courses.services import get_course_service
+
         code = request.data.get('code')
+        state = request.data.get('state')
 
         if not code:
             return Response({'error': 'Authorization code required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # TODO: Exchange code for tokens and save to user
-        return Response({'message': 'Udemy account connected successfully'})
+        # Validate state parameter
+        stored_state = request.session.get('oauth_state')
+        if state != stored_state:
+            return Response({'error': 'Invalid state parameter'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            udemy_service = get_udemy_service()
+
+            # Exchange code for token
+            token_data = udemy_service.exchange_code_for_token(code)
+
+            # Get user info from Udemy
+            user_info = udemy_service.get_user_info(token_data['access_token'])
+
+            # Update user profile with Udemy data
+            user = udemy_service.create_or_update_user(user_info, token_data)
+
+            # Sync user courses
+            course_service = get_course_service()
+            sync_result = course_service.sync_user_courses(user, force_refresh=True)
+
+            # Clean up session
+            request.session.pop('oauth_state', None)
+
+            return Response({
+                'message': 'Udemy account connected successfully',
+                'user': UserSerializer(user).data,
+                'sync_result': sync_result
+            })
+
+        except Exception as e:
+            logger.error(f'Udemy OAuth callback error: {e}')
+            return Response(
+                {'error': 'Failed to connect Udemy account'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class ConnectedAccountsView(APIView):

@@ -13,12 +13,11 @@ from django.core.cache import cache
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Course, Curriculum, UserCourse, CourseShare
 from .serializers import (
-    CourseSerializer, CourseListSerializer, CurriculumSerializer,
-    UserCourseSerializer, CourseShareSerializer, CourseStatsSerializer,
-    CourseSearchSerializer, CourseReviewSerializer, CourseEnrollmentSerializer,
-    PopularCoursesSerializer
+    CourseSerializer, CurriculumSerializer,
+    UserCourseSerializer, CourseShareSerializer
 )
-from .filters import CourseFilter
+from .services import get_course_service
+from ..core.utils import create_response
 import logging
 
 logger = logging.getLogger(__name__)
