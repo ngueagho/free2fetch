@@ -1,0 +1,578 @@
+{% load i18n %}
+
+<div class="ui dividing header">
+    {% trans "Downloads" %}
+    <div class="sub header">{% trans "Track your download progress" %}</div>
+</div>
+
+<!-- Download Statistics -->
+<div class="ui four statistics">
+    <div class="blue statistic">
+        <div class="value" id="totalDownloads">{{ downloads.count }}</div>
+        <div class="label">{% trans "Total Downloads" %}</div>
+    </div>
+    <div class="green statistic">
+        <div class="value" id="completedDownloads">
+            {{ downloads|dictsort:"status"|dictsortreversed:"status" |length }}
+        </div>
+        <div class="label">{% trans "Completed" %}</div>
+    </div>
+    <div class="yellow statistic">
+        <div class="value" id="activeDownloads">0</div>
+        <div class="label">{% trans "Active" %}</div>
+    </div>
+    <div class="red statistic">
+        <div class="value" id="failedDownloads">0</div>
+        <div class="label">{% trans "Failed" %}</div>
+    </div>
+</div>
+
+<div class="ui divider"></div>
+
+<!-- Download Controls -->
+<div class="ui secondary pointing menu">
+    <a class="item active" data-filter="all">
+        {% trans "All Downloads" %}
+    </a>
+    <a class="item" data-filter="downloading">
+        {% trans "Downloading" %}
+    </a>
+    <a class="item" data-filter="paused">
+        {% trans "Paused" %}
+    </a>
+    <a class="item" data-filter="completed">
+        {% trans "Completed" %}
+    </a>
+    <a class="item" data-filter="failed">
+        {% trans "Failed" %}
+    </a>
+    <div class="right menu">
+        <div class="item">
+            <button class="ui basic button" id="pauseAll">
+                <i class="pause icon"></i>
+                {% trans "Pause All" %}
+            </button>
+        </div>
+        <div class="item">
+            <button class="ui basic button" id="resumeAll">
+                <i class="play icon"></i>
+                {% trans "Resume All" %}
+            </button>
+        </div>
+        <div class="item">
+            <button class="ui red basic button" id="clearCompleted">
+                <i class="trash icon"></i>
+                {% trans "Clear Completed" %}
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Global Progress -->
+<div class="ui segment" id="globalProgress" style="{% if not downloads %}display: none;{% endif %}">
+    <div class="ui header">
+        <i class="download icon"></i>
+        <div class="content">
+            {% trans "Overall Progress" %}
+            <div class="sub header">
+                <span id="globalSpeed">0 KB/s</span> •
+                <span id="globalEta">{% trans "Calculating..." %}</span>
+            </div>
+        </div>
+    </div>
+    <div class="ui indicating progress" id="globalProgressBar">
+        <div class="bar"></div>
+        <div class="label">{% trans "Calculating..." %}</div>
+    </div>
+</div>
+
+<!-- Downloads Container -->
+<div class="ui courses items" id="downloadsContainer">
+    {% if downloads %}
+        {% for download in downloads %}
+            {% with course=download.course download_task=download %}
+                {% include 'partials/course_card.html' %}
+            {% endwith %}
+        {% endfor %}
+    {% else %}
+        <div class="ui placeholder segment">
+            <div class="ui icon header">
+                <i class="download icon"></i>
+                {% trans "No downloads yet" %}
+            </div>
+            <div class="inline">
+                <p>{% trans "Start downloading courses to see them here." %}</p>
+                <div class="ui primary button" onclick="switchSection('courses')">
+                    <i class="book icon"></i>
+                    {% trans "Browse Courses" %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Download Queue Management -->
+{% if downloads %}
+<div class="ui segment">
+    <div class="ui header">
+        <i class="list icon"></i>
+        {% trans "Download Queue" %}
+    </div>
+
+    <div class="ui relaxed divided list" id="downloadQueue">
+        {% for download in downloads %}
+            {% if download.status in 'pending,downloading,paused' %}
+            <div class="item" data-download-id="{{ download.id }}">
+                <div class="right floated content">
+                    <div class="ui basic icon buttons">
+                        <button class="ui button move-up" title="{% trans 'Move Up' %}">
+                            <i class="angle up icon"></i>
+                        </button>
+                        <button class="ui button move-down" title="{% trans 'Move Down' %}">
+                            <i class="angle down icon"></i>
+                        </button>
+                        <button class="ui red button remove-queue" title="{% trans 'Remove from Queue' %}">
+                            <i class="times icon"></i>
+                        </button>
+                    </div>
+                </div>
+                <img class="ui avatar image" src="{{ download.course.image_url }}" alt="{{ download.course.title }}">
+                <div class="content">
+                    <div class="header">{{ download.course.title }}</div>
+                    <div class="description">
+                        <div class="ui label {{ download.status|default:'pending' }}">
+                            {{ download.get_status_display|default:'Pending' }}
+                        </div>
+                        {% if download.status == 'downloading' %}
+                        <span class="download-speed">{{ download.download_speed|default:0 }} KB/s</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<style>
+.statistic .value {
+    color: inherit !important;
+}
+
+.ui.label.pending { background-color: #e0e1e2 !important; color: rgba(0,0,0,.87) !important; }
+.ui.label.preparing { background-color: #2185d0 !important; color: #fff !important; }
+.ui.label.downloading { background-color: #21ba45 !important; color: #fff !important; }
+.ui.label.paused { background-color: #f2711c !important; color: #fff !important; }
+.ui.label.completed { background-color: #00b5ad !important; color: #fff !important; }
+.ui.label.failed { background-color: #db2828 !important; color: #fff !important; }
+.ui.label.cancelled { background-color: #767676 !important; color: #fff !important; }
+
+.download-speed {
+    font-size: 0.9em;
+    color: #666;
+    margin-left: 10px;
+}
+
+#downloadQueue .item {
+    transition: all 0.3s ease;
+}
+
+#downloadQueue .item:hover {
+    background-color: #f8f9fa;
+}
+
+#downloadQueue .item.dragging {
+    opacity: 0.5;
+}
+</style>
+
+<script>
+// Downloads section JavaScript
+(function() {
+    let globalStats = {
+        totalDownloads: 0,
+        activeDownloads: 0,
+        completedDownloads: 0,
+        failedDownloads: 0,
+        globalSpeed: 0,
+        globalProgress: 0
+    };
+
+    // Initialize
+    updateDownloadStats();
+    initializeWebSocketConnections();
+
+    // Filter functionality
+    $('.ui.secondary.menu .item[data-filter]').on('click', function() {
+        const filter = $(this).data('filter');
+        $('.ui.secondary.menu .item').removeClass('active');
+        $(this).addClass('active');
+
+        filterDownloads(filter);
+    });
+
+    // Global controls
+    $('#pauseAll').on('click', pauseAllDownloads);
+    $('#resumeAll').on('click', resumeAllDownloads);
+    $('#clearCompleted').on('click', clearCompletedDownloads);
+
+    // Queue management
+    initializeQueueManagement();
+
+    function filterDownloads(filter) {
+        const $downloads = $('.course.item[data-download-id]');
+
+        $downloads.each(function() {
+            const $download = $(this);
+            const status = $download.data('download-status') || 'pending';
+
+            let show = true;
+
+            switch(filter) {
+                case 'downloading':
+                    show = status === 'downloading';
+                    break;
+                case 'paused':
+                    show = status === 'paused';
+                    break;
+                case 'completed':
+                    show = status === 'completed';
+                    break;
+                case 'failed':
+                    show = status === 'failed';
+                    break;
+                case 'all':
+                default:
+                    show = true;
+                    break;
+            }
+
+            if (show) {
+                $download.show();
+            } else {
+                $download.hide();
+            }
+        });
+    }
+
+    function pauseAllDownloads() {
+        const activeDownloads = $('.course.item[data-download-status="downloading"]');
+
+        if (activeDownloads.length === 0) {
+            showAlert('{% trans "No active downloads to pause" %}', 'info');
+            return;
+        }
+
+        if (confirm('{% trans "Are you sure you want to pause all active downloads?" %}')) {
+            activeDownloads.each(function() {
+                const downloadId = $(this).data('download-id');
+                pauseDownload(downloadId);
+            });
+        }
+    }
+
+    function resumeAllDownloads() {
+        const pausedDownloads = $('.course.item[data-download-status="paused"]');
+
+        if (pausedDownloads.length === 0) {
+            showAlert('{% trans "No paused downloads to resume" %}', 'info');
+            return;
+        }
+
+        pausedDownloads.each(function() {
+            const downloadId = $(this).data('download-id');
+            resumeDownload(downloadId);
+        });
+    }
+
+    function clearCompletedDownloads() {
+        const completedDownloads = $('.course.item[data-download-status="completed"]');
+
+        if (completedDownloads.length === 0) {
+            showAlert('{% trans "No completed downloads to clear" %}', 'info');
+            return;
+        }
+
+        if (confirm('{% trans "Are you sure you want to clear all completed downloads?" %}')) {
+            fetch('/api/downloads/clear-completed/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken()
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    completedDownloads.fadeOut(300, function() {
+                        $(this).remove();
+                        updateDownloadStats();
+                    });
+                    showAlert('{% trans "Completed downloads cleared" %}', 'positive');
+                } else {
+                    showAlert('{% trans "Failed to clear downloads:" %} ' + data.error, 'negative');
+                }
+            })
+            .catch(error => {
+                showAlert('{% trans "Failed to clear downloads:" %} ' + error.message, 'negative');
+            });
+        }
+    }
+
+    function pauseDownload(downloadId) {
+        fetch(`/api/downloads/tasks/${downloadId}/pause/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateDownloadUI(downloadId, 'paused');
+            } else {
+                showAlert('{% trans "Failed to pause download" %}', 'negative');
+            }
+        })
+        .catch(error => {
+            console.error('Pause failed:', error);
+        });
+    }
+
+    function resumeDownload(downloadId) {
+        fetch(`/api/downloads/tasks/${downloadId}/resume/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateDownloadUI(downloadId, 'downloading');
+            } else {
+                showAlert('{% trans "Failed to resume download" %}', 'negative');
+            }
+        })
+        .catch(error => {
+            console.error('Resume failed:', error);
+        });
+    }
+
+    function updateDownloadUI(downloadId, status) {
+        const $download = $(`.course.item[data-download-id="${downloadId}"]`);
+        $download.attr('data-download-status', status);
+
+        // Update status label
+        const statusText = getStatusText(status);
+        $download.find('.ui.label').removeClass().addClass(`ui label ${status}`).text(statusText);
+
+        updateDownloadStats();
+    }
+
+    function getStatusText(status) {
+        const statusTexts = {
+            'pending': '{% trans "Pending" %}',
+            'preparing': '{% trans "Preparing" %}',
+            'downloading': '{% trans "Downloading" %}',
+            'paused': '{% trans "Paused" %}',
+            'completed': '{% trans "Completed" %}',
+            'failed': '{% trans "Failed" %}',
+            'cancelled': '{% trans "Cancelled" %}'
+        };
+        return statusTexts[status] || status;
+    }
+
+    function updateDownloadStats() {
+        const $downloads = $('.course.item[data-download-id]');
+
+        globalStats.totalDownloads = $downloads.length;
+        globalStats.activeDownloads = $downloads.filter('[data-download-status="downloading"]').length;
+        globalStats.completedDownloads = $downloads.filter('[data-download-status="completed"]').length;
+        globalStats.failedDownloads = $downloads.filter('[data-download-status="failed"]').length;
+
+        $('#totalDownloads').text(globalStats.totalDownloads);
+        $('#activeDownloads').text(globalStats.activeDownloads);
+        $('#completedDownloads').text(globalStats.completedDownloads);
+        $('#failedDownloads').text(globalStats.failedDownloads);
+
+        // Update global progress
+        updateGlobalProgress();
+    }
+
+    function updateGlobalProgress() {
+        if (globalStats.activeDownloads > 0) {
+            $('#globalProgress').show();
+
+            // Calculate overall progress and speed
+            let totalProgress = 0;
+            let totalSpeed = 0;
+
+            $('.course.item[data-download-status="downloading"]').each(function() {
+                const progress = parseFloat($(this).find('.progress .bar').attr('data-percent') || 0);
+                const speed = parseFloat($(this).find('.download-speed .value').text() || 0);
+
+                totalProgress += progress;
+                totalSpeed += speed;
+            });
+
+            const avgProgress = totalProgress / Math.max(globalStats.activeDownloads, 1);
+            $('#globalProgressBar').progress('set percent', avgProgress);
+            $('#globalSpeed').text(formatSpeed(totalSpeed));
+
+        } else {
+            $('#globalProgress').hide();
+        }
+    }
+
+    function formatSpeed(speed) {
+        if (speed < 1024) {
+            return speed.toFixed(1) + ' KB/s';
+        } else {
+            return (speed / 1024).toFixed(1) + ' MB/s';
+        }
+    }
+
+    function initializeQueueManagement() {
+        // Make queue items draggable and sortable
+        $('#downloadQueue').sortable({
+            placeholder: 'ui segment',
+            handle: '.item',
+            update: function(event, ui) {
+                updateQueueOrder();
+            }
+        });
+
+        // Queue control buttons
+        $(document).on('click', '.move-up', function() {
+            const $item = $(this).closest('.item');
+            $item.prev('.item').before($item);
+            updateQueueOrder();
+        });
+
+        $(document).on('click', '.move-down', function() {
+            const $item = $(this).closest('.item');
+            $item.next('.item').after($item);
+            updateQueueOrder();
+        });
+
+        $(document).on('click', '.remove-queue', function() {
+            const $item = $(this).closest('.item');
+            const downloadId = $item.data('download-id');
+
+            if (confirm('{% trans "Remove this download from the queue?" %}')) {
+                // Cancel the download
+                fetch(`/api/downloads/tasks/${downloadId}/cancel/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        $item.fadeOut(300, function() {
+                            $(this).remove();
+                            updateQueueOrder();
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    function updateQueueOrder() {
+        const order = [];
+        $('#downloadQueue .item').each(function(index) {
+            order.push({
+                download_id: $(this).data('download-id'),
+                position: index
+            });
+        });
+
+        fetch('/api/downloads/update-queue-order/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ order: order })
+        })
+        .catch(error => {
+            console.error('Failed to update queue order:', error);
+        });
+    }
+
+    function initializeWebSocketConnections() {
+        // Initialize WebSocket connections for all active downloads
+        $('.course.item[data-download-id]').each(function() {
+            const downloadId = $(this).data('download-id');
+            const status = $(this).data('download-status');
+
+            if (['pending', 'downloading', 'preparing'].includes(status)) {
+                initializeDownloadProgress(downloadId);
+            }
+        });
+    }
+
+    // Global function to initialize download progress tracking
+    window.initializeDownloadProgress = function(downloadId) {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/download-progress/${downloadId}/`;
+
+        const websocket = new WebSocket(wsUrl);
+
+        websocket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            updateDownloadProgress(downloadId, data);
+        };
+
+        websocket.onerror = function(error) {
+            console.error('WebSocket error for download', downloadId, error);
+        };
+
+        // Store websocket reference for cleanup
+        const $download = $(`.course.item[data-download-id="${downloadId}"]`);
+        $download.data('websocket', websocket);
+    };
+
+    function updateDownloadProgress(downloadId, data) {
+        const $download = $(`.course.item[data-download-id="${downloadId}"]`);
+
+        if (data.type === 'progress_update') {
+            // Update progress bar
+            const $progressBar = $download.find('.progress');
+            $progressBar.progress('set percent', data.percentage);
+
+            // Update speed
+            $download.find('.download-speed .value').text(data.details.speed || 0);
+
+            // Update status
+            updateDownloadUI(downloadId, data.status);
+
+        } else if (data.type === 'status_change') {
+            updateDownloadUI(downloadId, data.status);
+
+            if (data.status === 'completed') {
+                showAlert(`{% trans "Download completed:" %} ${$download.find('.coursename').text()}`, 'positive');
+            }
+
+        } else if (data.type === 'error') {
+            updateDownloadUI(downloadId, 'failed');
+            showAlert(`{% trans "Download failed:" %} ${data.error_message}`, 'negative');
+        }
+
+        updateDownloadStats();
+    }
+
+    // Cleanup WebSocket connections when switching sections
+    window.cleanupDownloadConnections = function() {
+        $('.course.item[data-download-id]').each(function() {
+            const websocket = $(this).data('websocket');
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.close();
+            }
+        });
+    };
+})();
+</script>

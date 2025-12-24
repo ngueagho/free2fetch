@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Udemy Downloader{% endblock %}</title>
+
+    {% load static %}
+    {% load i18n %}
+
+    <!-- Semantic UI CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'images/icon.png' %}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="ui container" style="margin-top: 20px;">
+        <!-- Login Section (hidden by default) -->
+        <div class="ui login grid" id="loginSection" style="{% if user.is_authenticated %}display: none;{% endif %}">
+            <div class="ui column">
+                <div class="ui massive center aligned header">
+                    <img src="{% static 'images/icon.png' %}" class="ui image" style="width: 128px;">
+                    <div class="content">
+                        Udeler | {% trans "Course Downloader" %}
+                        <div class="sub header">{% trans "Download your Udemy courses for offline viewing" %}</div>
+                    </div>
+                </div>
+
+                {% block login_content %}
+                <div class="ui raised segment">
+                    <div class="ui form">
+                        <!-- Authentication forms will go here -->
+                        <div class="ui dividing header">{% trans "Authentication" %}</div>
+
+                        <div class="field">
+                            <div class="ui checkbox">
+                                <input type="checkbox" id="business" name="business">
+                                <label>{% trans "Business Account" %}</label>
+                            </div>
+                        </div>
+
+                        <div class="field" id="divsubdomain" style="display: none;">
+                            <label>{% trans "Business Subdomain" %}</label>
+                            <input type="text" id="subdomain" name="subdomain" placeholder="{% trans 'your-company' %}">
+                        </div>
+
+                        <div class="ui two column grid">
+                            <div class="column">
+                                <button class="ui fluid primary button" onclick="loginWithUdemy()">
+                                    {% trans "Login with Udemy" %}
+                                </button>
+                            </div>
+                            <div class="column">
+                                <button class="ui fluid secondary button" onclick="loginWithAccessToken()">
+                                    {% trans "Use Access Token" %}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="ui divider"></div>
+
+                        <div class="ui center aligned basic segment">
+                            <a href="#" class="how-get-token">
+                                <i class="help circle icon"></i>
+                                {% trans "How to get Access Token?" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endblock %}
+            </div>
+        </div>
+
+        <!-- Main Dashboard (hidden by default for non-authenticated users) -->
+        <div class="ui dashboard" style="{% if not user.is_authenticated %}display: none;{% endif %}">
+
+            <!-- Header -->
+            <div class="ui top attached menu">
+                <div class="header item">
+                    <img src="{% static 'images/icon.png' %}" class="ui mini image">
+                    Udeler
+                </div>
+
+                <div class="right menu">
+                    <div class="ui dropdown item">
+                        <i class="user icon"></i>
+                        {{ user.username|default:"User" }}
+                        <i class="dropdown icon"></i>
+                        <div class="menu">
+                            <a class="item" href="#" onclick="showSettings()">
+                                <i class="settings icon"></i>
+                                {% trans "Settings" %}
+                            </a>
+                            <a class="item" href="#" onclick="logout()">
+                                <i class="sign out icon"></i>
+                                {% trans "Logout" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Navigation -->
+            <div class="ui bottom attached segment">
+                <div class="ui grid">
+                    <div class="three wide column">
+                        <div class="ui vertical fluid secondary menu sidebar">
+                            <a class="courses-sidebar item active purple" data-section="courses">
+                                <i class="book icon"></i>
+                                {% trans "Courses" %}
+                            </a>
+                            <a class="downloads-sidebar item" data-section="downloads">
+                                <i class="download icon"></i>
+                                {% trans "Downloads" %}
+                                <div class="ui label" id="downloadCount" style="display: none;">0</div>
+                            </a>
+                            <a class="settings-sidebar item" data-section="settings">
+                                <i class="settings icon"></i>
+                                {% trans "Settings" %}
+                            </a>
+                            <a class="about-sidebar item" data-section="about">
+                                <i class="info circle icon"></i>
+                                {% trans "About" %}
+                            </a>
+                            <a class="logger-sidebar item" data-section="logger">
+                                <i class="file alternate outline icon"></i>
+                                {% trans "Logger" %}
+                                <div class="ui red label" id="badge-logger" style="display: none;">0</div>
+                            </a>
+                            <div class="ui divider"></div>
+                            <a class="logout-sidebar item">
+                                <i class="sign out icon"></i>
+                                {% trans "Logout" %}
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Main Content Area -->
+                    <div class="thirteen wide column">
+                        <div class="content">
+                            <!-- Loading Dimmer -->
+                            <div class="ui dimmer">
+                                <div class="ui big text loader">{% trans "Loading" %}</div>
+                            </div>
+
+                            {% block content %}
+                            <!-- Courses Section -->
+                            <div class="ui courses section">
+                                <div class="ui dividing header">
+                                    {% trans "My Courses" %}
+                                    <div class="sub header">{% trans "Select a course to download" %}</div>
+                                </div>
+
+                                <!-- Search Form -->
+                                <form class="ui search form" hx-post="/api/courses/search/" hx-target="#coursesContainer">
+                                    <div class="ui action input">
+                                        <input type="text" name="query" placeholder="{% trans 'Search courses...' %}">
+                                        <button type="submit" class="ui primary button">
+                                            <i class="search icon"></i>
+                                            {% trans "Search" %}
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <div class="ui divider"></div>
+
+                                <!-- Courses Container -->
+                                <div class="ui courses items" id="coursesContainer">
+                                    <!-- Courses will be loaded here via HTMX -->
+                                </div>
+                            </div>
+
+                            <!-- Downloads Section -->
+                            <div class="ui downloads section" style="display: none;">
+                                <div class="ui dividing header">
+                                    {% trans "Downloads" %}
+                                    <div class="sub header">{% trans "Track your download progress" %}</div>
+                                </div>
+
+                                <!-- Downloads Container -->
+                                <div class="ui courses items" id="downloadsContainer">
+                                    <!-- Downloads will be loaded here via HTMX -->
+                                </div>
+                            </div>
+
+                            <!-- Settings Section -->
+                            <div class="ui settings section" style="display: none;">
+                                {% include 'partials/settings.html' %}
+                            </div>
+
+                            <!-- About Section -->
+                            <div class="ui about section" style="display: none;">
+                                {% include 'partials/about.html' %}
+                            </div>
+
+                            <!-- Logger Section -->
+                            <div class="ui logger section" style="display: none;">
+                                {% include 'partials/logger.html' %}
+                            </div>
+                            {% endblock %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="ui subtitle modal">
+        <div class="header">{% trans "Select Subtitle Language" %}</div>
+        <div class="content">
+            <div class="ui selection dropdown">
+                <input type="hidden" name="subtitle">
+                <i class="dropdown icon"></i>
+                <div class="default text">{% trans "Select subtitle language" %}</div>
+                <div class="menu"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ui update-available modal">
+        <div class="header">{% trans "Update Available" %}</div>
+        <div class="content">
+            <p>{% trans "A new version is available. Would you like to download it?" %}</p>
+        </div>
+        <div class="actions">
+            <div class="ui cancel button">{% trans "Later" %}</div>
+            <div class="ui primary button download-update">{% trans "Download" %}</div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Semantic UI JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js"></script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- WebSocket for real-time updates -->
+    <script src="{% static 'js/websocket-client.js' %}"></script>
+
+    <!-- Custom JavaScript -->
+    <script src="{% static 'js/app.js' %}"></script>
+
+    <!-- Translation JavaScript -->
+    <script>
+        // Translation function for JavaScript
+        window.translate = function(key) {
+            const translations = {{ translations_json|safe }};
+            return translations[key] || key;
+        };
+
+        // Application version
+        window.appVersion = "{{ app_version }}";
+
+        // User data
+        window.userData = {
+            id: {{ user.id|default:"null" }},
+            username: "{{ user.username|escapejs }}",
+            isAuthenticated: {{ user.is_authenticated|yesno:"true,false" }}
+        };
+
+        // API endpoints
+        window.apiEndpoints = {
+            courses: '/api/courses/',
+            downloads: '/api/downloads/',
+            auth: '/api/auth/',
+            settings: '/api/settings/'
+        };
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

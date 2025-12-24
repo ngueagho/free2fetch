@@ -1,0 +1,442 @@
+{% load i18n %}
+
+<div class="ui dividing header">
+    {% trans "Logger" %}
+    <div class="sub header">{% trans "Application logs and debugging information" %}</div>
+</div>
+
+<!-- Log Controls -->
+<div class="ui secondary menu">
+    <div class="item">
+        <div class="ui labeled input">
+            <div class="ui label">{% trans "Filter" %}</div>
+            <input type="text" id="logFilter" placeholder="{% trans 'Search logs...' %}">
+        </div>
+    </div>
+
+    <div class="item">
+        <select class="ui dropdown" id="logLevel">
+            <option value="all">{% trans "All Levels" %}</option>
+            <option value="debug">{% trans "Debug" %}</option>
+            <option value="info">{% trans "Info" %}</option>
+            <option value="warning">{% trans "Warning" %}</option>
+            <option value="error">{% trans "Error" %}</option>
+            <option value="critical">{% trans "Critical" %}</option>
+        </select>
+    </div>
+
+    <div class="right menu">
+        <div class="item">
+            <div class="ui checkbox">
+                <input type="checkbox" id="autoScroll" checked>
+                <label>{% trans "Auto Scroll" %}</label>
+            </div>
+        </div>
+
+        <div class="item">
+            <button class="ui basic button" id="clearLogs">
+                <i class="trash icon"></i>
+                {% trans "Clear" %}
+            </button>
+        </div>
+
+        <div class="item">
+            <button class="ui primary button" id="exportLogs">
+                <i class="download icon"></i>
+                {% trans "Export" %}
+            </button>
+        </div>
+
+        <div class="item">
+            <button class="ui button" id="refreshLogs">
+                <i class="refresh icon"></i>
+                {% trans "Refresh" %}
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Log Statistics -->
+<div class="ui statistics">
+    <div class="blue statistic">
+        <div class="value" id="totalLogs">0</div>
+        <div class="label">{% trans "Total Logs" %}</div>
+    </div>
+    <div class="green statistic">
+        <div class="value" id="infoLogs">0</div>
+        <div class="label">{% trans "Info" %}</div>
+    </div>
+    <div class="yellow statistic">
+        <div class="value" id="warningLogs">0</div>
+        <div class="label">{% trans "Warnings" %}</div>
+    </div>
+    <div class="red statistic">
+        <div class="value" id="errorLogs">0</div>
+        <div class="label">{% trans "Errors" %}</div>
+    </div>
+</div>
+
+<div class="ui divider"></div>
+
+<!-- Log Container -->
+<div class="ui segment" style="height: 500px; overflow-y: auto; background: #1e1e1e; color: #ffffff; font-family: 'Courier New', monospace;" id="logContainer">
+    <div id="logContent">
+        <div class="ui active centered inline loader">{% trans "Loading logs..." %}</div>
+    </div>
+</div>
+
+<!-- Log Details Modal -->
+<div class="ui modal" id="logDetailsModal">
+    <div class="header">{% trans "Log Details" %}</div>
+    <div class="scrolling content">
+        <div class="ui form">
+            <div class="field">
+                <label>{% trans "Timestamp" %}</label>
+                <input type="text" id="detailTimestamp" readonly>
+            </div>
+            <div class="field">
+                <label>{% trans "Level" %}</label>
+                <input type="text" id="detailLevel" readonly>
+            </div>
+            <div class="field">
+                <label>{% trans "Logger" %}</label>
+                <input type="text" id="detailLogger" readonly>
+            </div>
+            <div class="field">
+                <label>{% trans "Message" %}</label>
+                <textarea id="detailMessage" readonly rows="3"></textarea>
+            </div>
+            <div class="field" id="detailStackField" style="display: none;">
+                <label>{% trans "Stack Trace" %}</label>
+                <textarea id="detailStack" readonly rows="10"></textarea>
+            </div>
+            <div class="field" id="detailMetaField" style="display: none;">
+                <label>{% trans "Metadata" %}</label>
+                <textarea id="detailMeta" readonly rows="5"></textarea>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <div class="ui cancel button">{% trans "Close" %}</div>
+        <div class="ui primary button" id="copyLogDetails">
+            <i class="copy icon"></i>
+            {% trans "Copy to Clipboard" %}
+        </div>
+    </div>
+</div>
+
+<style>
+.log-entry {
+    padding: 8px;
+    border-bottom: 1px solid #333;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.log-entry:hover {
+    background-color: #2a2a2a !important;
+}
+
+.log-entry .timestamp {
+    color: #888;
+    margin-right: 10px;
+    min-width: 160px;
+    display: inline-block;
+}
+
+.log-entry .level {
+    margin-right: 10px;
+    min-width: 60px;
+    display: inline-block;
+    font-weight: bold;
+}
+
+.log-entry .logger {
+    color: #4a9eff;
+    margin-right: 10px;
+    min-width: 120px;
+    display: inline-block;
+}
+
+.log-entry .message {
+    color: #ffffff;
+}
+
+.log-level-debug .level { color: #888; }
+.log-level-info .level { color: #5bc0de; }
+.log-level-warning .level { color: #f0ad4e; }
+.log-level-error .level { color: #d9534f; }
+.log-level-critical .level { color: #ff0000; background: #330000; }
+
+.log-entry.filtered {
+    display: none;
+}
+</style>
+
+<script>
+// Logger specific JavaScript
+(function() {
+    let logs = [];
+    let filteredLogs = [];
+    let logStats = { total: 0, info: 0, warning: 0, error: 0 };
+    let websocket = null;
+    let autoScrollEnabled = true;
+
+    // Initialize
+    $('.ui.dropdown').dropdown();
+    initializeWebSocket();
+    loadLogs();
+
+    // Event handlers
+    $('#logFilter').on('input', filterLogs);
+    $('#logLevel').on('change', filterLogs);
+    $('#autoScroll').on('change', function() {
+        autoScrollEnabled = $(this).is(':checked');
+    });
+
+    $('#clearLogs').on('click', clearLogs);
+    $('#exportLogs').on('click', exportLogs);
+    $('#refreshLogs').on('click', loadLogs);
+
+    function initializeWebSocket() {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/logger/`;
+
+        websocket = new WebSocket(wsUrl);
+
+        websocket.onopen = function() {
+            console.log('Logger WebSocket connected');
+        };
+
+        websocket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+
+            if (data.type === 'log_entry') {
+                addLogEntry(data.log_entry);
+            }
+        };
+
+        websocket.onclose = function() {
+            console.log('Logger WebSocket disconnected');
+            setTimeout(initializeWebSocket, 5000); // Reconnect after 5 seconds
+        };
+
+        websocket.onerror = function(error) {
+            console.error('Logger WebSocket error:', error);
+        };
+    }
+
+    function loadLogs() {
+        $('#logContent').html('<div class="ui active centered inline loader">{% trans "Loading logs..." %}</div>');
+
+        fetch('/api/system/logs/')
+            .then(response => response.json())
+            .then(data => {
+                logs = data.logs || [];
+                updateLogStats();
+                renderLogs();
+            })
+            .catch(error => {
+                console.error('Failed to load logs:', error);
+                $('#logContent').html('<div class="ui negative message">{% trans "Failed to load logs" %}</div>');
+            });
+    }
+
+    function addLogEntry(logEntry) {
+        logs.unshift(logEntry); // Add to beginning
+
+        // Limit to 1000 entries
+        if (logs.length > 1000) {
+            logs = logs.slice(0, 1000);
+        }
+
+        updateLogStats();
+        renderLogs();
+    }
+
+    function updateLogStats() {
+        logStats = {
+            total: logs.length,
+            info: logs.filter(log => log.level === 'info').length,
+            warning: logs.filter(log => log.level === 'warning').length,
+            error: logs.filter(log => log.level === 'error' || log.level === 'critical').length
+        };
+
+        $('#totalLogs').text(logStats.total);
+        $('#infoLogs').text(logStats.info);
+        $('#warningLogs').text(logStats.warning);
+        $('#errorLogs').text(logStats.error);
+    }
+
+    function renderLogs() {
+        filterLogs();
+    }
+
+    function filterLogs() {
+        const filterText = $('#logFilter').val().toLowerCase();
+        const levelFilter = $('#logLevel').val();
+
+        filteredLogs = logs.filter(log => {
+            // Level filter
+            if (levelFilter !== 'all' && log.level !== levelFilter) {
+                return false;
+            }
+
+            // Text filter
+            if (filterText && !log.message.toLowerCase().includes(filterText) &&
+                !log.logger.toLowerCase().includes(filterText)) {
+                return false;
+            }
+
+            return true;
+        });
+
+        renderFilteredLogs();
+    }
+
+    function renderFilteredLogs() {
+        if (filteredLogs.length === 0) {
+            $('#logContent').html('<div class="ui message">{% trans "No logs match the current filter" %}</div>');
+            return;
+        }
+
+        const logHtml = filteredLogs.map(log => {
+            const timestamp = new Date(log.timestamp).toLocaleString();
+            const level = log.level.toUpperCase();
+            const logger = log.logger || 'system';
+            const message = escapeHtml(log.message);
+
+            return `
+                <div class="log-entry log-level-${log.level}" data-log-id="${log.id}">
+                    <span class="timestamp">${timestamp}</span>
+                    <span class="level">[${level}]</span>
+                    <span class="logger">${logger}:</span>
+                    <span class="message">${message}</span>
+                </div>
+            `;
+        }).join('');
+
+        $('#logContent').html(logHtml);
+
+        // Add click handlers for log details
+        $('.log-entry').on('click', function() {
+            const logId = $(this).data('log-id');
+            const log = logs.find(l => l.id === logId);
+            if (log) {
+                showLogDetails(log);
+            }
+        });
+
+        // Auto-scroll to bottom if enabled
+        if (autoScrollEnabled) {
+            const container = $('#logContainer')[0];
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+
+    function showLogDetails(log) {
+        $('#detailTimestamp').val(new Date(log.timestamp).toLocaleString());
+        $('#detailLevel').val(log.level.toUpperCase());
+        $('#detailLogger').val(log.logger || 'system');
+        $('#detailMessage').val(log.message);
+
+        if (log.stack_trace) {
+            $('#detailStack').val(log.stack_trace);
+            $('#detailStackField').show();
+        } else {
+            $('#detailStackField').hide();
+        }
+
+        if (log.metadata) {
+            $('#detailMeta').val(JSON.stringify(log.metadata, null, 2));
+            $('#detailMetaField').show();
+        } else {
+            $('#detailMetaField').hide();
+        }
+
+        $('#logDetailsModal').modal('show');
+    }
+
+    function clearLogs() {
+        if (confirm('{% trans "Are you sure you want to clear all logs?" %}')) {
+            fetch('/api/system/logs/clear/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken()
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    logs = [];
+                    updateLogStats();
+                    renderLogs();
+                    showAlert('{% trans "Logs cleared successfully" %}', 'positive');
+                } else {
+                    showAlert('{% trans "Failed to clear logs" %}', 'negative');
+                }
+            })
+            .catch(error => {
+                showAlert('{% trans "Failed to clear logs:" %} ' + error.message, 'negative');
+            });
+        }
+    }
+
+    function exportLogs() {
+        const button = $('#exportLogs');
+        const originalText = button.html();
+        button.addClass('loading disabled');
+
+        const exportData = filteredLogs.map(log => {
+            return `[${new Date(log.timestamp).toISOString()}] [${log.level.toUpperCase()}] ${log.logger}: ${log.message}`;
+        }).join('\n');
+
+        // Create and download file
+        const blob = new Blob([exportData], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `udeler-logs-${new Date().toISOString().split('T')[0]}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        button.removeClass('loading disabled').html(originalText);
+        showAlert('{% trans "Logs exported successfully" %}', 'positive');
+    }
+
+    // Copy log details to clipboard
+    $('#copyLogDetails').on('click', function() {
+        const details = [
+            `Timestamp: ${$('#detailTimestamp').val()}`,
+            `Level: ${$('#detailLevel').val()}`,
+            `Logger: ${$('#detailLogger').val()}`,
+            `Message: ${$('#detailMessage').val()}`
+        ];
+
+        if ($('#detailStackField').is(':visible')) {
+            details.push(`Stack Trace:\n${$('#detailStack').val()}`);
+        }
+
+        if ($('#detailMetaField').is(':visible')) {
+            details.push(`Metadata:\n${$('#detailMeta').val()}`);
+        }
+
+        const text = details.join('\n\n');
+
+        navigator.clipboard.writeText(text).then(function() {
+            showAlert('{% trans "Log details copied to clipboard" %}', 'positive');
+        }).catch(function() {
+            showAlert('{% trans "Failed to copy to clipboard" %}', 'negative');
+        });
+    });
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+})();
+</script>

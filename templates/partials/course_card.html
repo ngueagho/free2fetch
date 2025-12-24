@@ -1,0 +1,359 @@
+{% load i18n %}
+{% load static %}
+
+<div class="ui course item"
+     course-id="{{ course.udemy_id }}"
+     course-url="{{ course.url }}"
+     course-completed="{% if course.is_downloaded %}true{% else %}{% endif %}"
+     style="padding-top: 35px !important; padding-bottom: 25px;">
+
+    <input type="hidden" name="encryptedvideos" value="{{ course.encrypted_videos_count }}">
+    <input type="hidden" name="selectedSubtitle" value="">
+    <input type="hidden" name="path-downloaded" value="{{ course.download_path }}">
+
+    <!-- Download Quality & Speed Indicators -->
+    <div class="ui tiny label download-quality grey" style="display: none;"></div>
+    <div class="ui tiny black label download-speed" style="display: none;">
+        <span class="value">0</span>
+        <span class="download-unit"> KB/s</span>
+    </div>
+
+    <!-- Course Image with Encryption Indicator -->
+    <div class="ui tiny image{% if course.encrypted_videos_count > 0 %} wrapper{% endif %}">
+        {% if course.encrypted_videos_count > 0 %}
+        <div class="ui red left corner label icon-encrypted">
+            <i class="lock icon"></i>
+        </div>
+        {% endif %}
+
+        <img src="{{ course.image_url|default:'/static/images/default-course.png' }}"
+             class="course-image border-radius"
+             alt="{{ course.title }}" />
+
+        {% if is_download_section %}
+        <a class="ui basic dismiss-download">&nbsp;&nbsp;&nbsp;{% trans "Dismiss" %}</a>
+        {% endif %}
+
+        {% if course.encrypted_videos_count > 0 %}
+        <div class="tooltip">{% trans "Contains DRM protection and cannot be downloaded" %}</div>
+        {% endif %}
+    </div>
+
+    <!-- Course Content -->
+    <div class="content">
+        <span class="coursename">{{ course.title }}</span>
+
+        <!-- Success Message -->
+        <div class="ui tiny icon green download-success message" style="{% if not course.is_downloaded %}display: none;{% endif %}">
+            <i class="check icon"></i>
+            <div class="content">
+                <div class="headers">
+                    <h4>{% trans "Download Finished" %}</h4>
+                </div>
+                <p>{% trans "Click to dismiss" %}</p>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div class="ui tiny icon red download-error message" style="display: none;">
+            <i class="bug icon"></i>
+            <div class="content">
+                <div class="headers">
+                    <h4>{% trans "Download Failed" %}</h4>
+                </div>
+                <p>{% trans "Click to retry" %}</p>
+            </div>
+        </div>
+
+        <!-- Encrypted Content Message -->
+        <div class="ui tiny icon purple course-encrypted message"
+             style="{% if course.encrypted_videos_count == 0 %}display: none;{% endif %}">
+            <i class="lock icon"></i>
+            <div class="content">
+                <div class="headers">
+                    <h4>{% trans "Contains DRM protection and cannot be downloaded" %}</h4>
+                </div>
+                <p>{% trans "Click to dismiss" %}</p>
+            </div>
+        </div>
+
+        <!-- Download Status & Controls -->
+        <div class="extra download-status">
+            <!-- Action Buttons -->
+            <div class="ui tiny icon action buttons">
+                <button class="ui basic blue save_m3u button"
+                        data-course-id="{{ course.udemy_id }}"
+                        title="{% trans 'Export M3U Playlist' %}">
+                    <i class="save outline icon"></i>
+                </button>
+
+                <div style="height: 1px; width: 5px;"></div>
+
+                <button class="ui basic blue download button"
+                        data-course-id="{{ course.udemy_id }}"
+                        title="{% trans 'Download Course' %}">
+                    <i class="download icon"></i>
+                </button>
+
+                <button class="ui basic red disabled pause button"
+                        title="{% trans 'Pause Download' %}">
+                    <i class="pause icon"></i>
+                </button>
+
+                <button class="ui basic green disabled resume button"
+                        title="{% trans 'Resume Download' %}">
+                    <i class="play icon"></i>
+                </button>
+
+                <div style="height: 1px; width: 5px;"></div>
+
+                <button class="ui basic yellow open-in-browser button"
+                        data-course-url="{{ course.url }}"
+                        title="{% trans 'Open in Browser' %}">
+                    <i class="desktop icon"></i>
+                </button>
+
+                <button class="ui basic teal open-dir button"
+                        data-download-path="{{ course.download_path }}"
+                        title="{% trans 'Open Download Folder' %}"
+                        {% if not course.download_path %}style="display: none;"{% endif %}>
+                    <i class="folder open icon"></i>
+                </button>
+            </div>
+
+            <div class="ui horizontal divider"></div>
+
+            <!-- Preparation Progress -->
+            <progress class="prepare-downloading" style="width: 100%; display: none;"></progress>
+
+            <!-- Individual Progress (for current file) -->
+            <div class="ui tiny indicating individual progress" style="display: none;">
+                <div class="bar"></div>
+            </div>
+
+            <div class="ui horizontal divider"></div>
+
+            <!-- Combined Progress (for entire course) -->
+            <div class="ui small indicating combined progress" style="display: none;">
+                <div class="bar">
+                    <div class="progress"></div>
+                </div>
+                <div class="label">{% trans "Building Course Data" %}</div>
+            </div>
+
+            <!-- Download Info -->
+            <div class="info-downloaded" style="{% if not course.download_path %}display: none;{% endif %}">
+                {% if course.is_downloaded %}
+                    {% trans "Download finished on" %} {{ course.enrolled_at|date:"Y-m-d H:i" }}
+                {% elif course.download_path %}
+                    {% trans "Download started since" %} {{ course.enrolled_at|date:"Y-m-d H:i" }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Course card specific JavaScript
+(function() {
+    const courseId = {{ course.udemy_id }};
+    const $courseCard = $('[course-id="{{ course.udemy_id }}"]');
+
+    // Download button handler
+    $courseCard.find('.download.button').on('click', function() {
+        startDownload(courseId);
+    });
+
+    // M3U export handler
+    $courseCard.find('.save_m3u.button').on('click', function() {
+        exportM3U(courseId);
+    });
+
+    // Open in browser handler
+    $courseCard.find('.open-in-browser.button').on('click', function() {
+        const courseUrl = $(this).data('course-url');
+        const fullUrl = `https://{{ user.udemy_subdomain|default:"www" }}.udemy.com${courseUrl}`;
+        window.open(fullUrl, '_blank');
+    });
+
+    // Open directory handler
+    $courseCard.find('.open-dir.button').on('click', function() {
+        const downloadPath = $(this).data('download-path');
+        if (downloadPath) {
+            // This would need to be handled server-side or via electron
+            showAlert('{% trans "Download folder:" %} ' + downloadPath);
+        }
+    });
+
+    // Pause/Resume handlers
+    $courseCard.find('.pause.button').on('click', function() {
+        pauseDownload(courseId);
+    });
+
+    $courseCard.find('.resume.button').on('click', function() {
+        resumeDownload(courseId);
+    });
+
+    // Dismiss handlers
+    $courseCard.find('.download-success, .course-encrypted').on('click', function() {
+        $(this).hide();
+        $courseCard.find('.download-status').show();
+    });
+
+    $courseCard.find('.dismiss-download').on('click', function() {
+        dismissDownload(courseId);
+    });
+
+    // Error retry handler
+    $courseCard.find('.download-error').on('click', function() {
+        retryDownload(courseId);
+    });
+
+    // Functions
+    function startDownload(courseId) {
+        // First check if subtitles are available and show selection modal
+        fetch(`/api/downloads/subtitles/${courseId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.subtitle_choices && data.subtitle_choices.length > 1) {
+                    showSubtitleModal(courseId, data.subtitle_choices);
+                } else {
+                    initiateDownload(courseId, '');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching subtitles:', error);
+                initiateDownload(courseId, '');
+            });
+    }
+
+    function initiateDownload(courseId, selectedSubtitle) {
+        // Show preparation state
+        $courseCard.find('.prepare-downloading').show();
+        $courseCard.find('.download.button').addClass('disabled');
+
+        // Start download via API
+        fetch('/api/downloads/start/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                course_id: courseId,
+                selected_subtitle: selectedSubtitle,
+                download_type: parseInt($('#downloadType').val() || '0'),
+                video_quality: $('#videoQuality').val() || 'Auto',
+                enable_range_download: $('#enableDownloadStartEnd').is(':checked'),
+                download_start: parseInt($('#downloadStart').val() || '1'),
+                download_end: parseInt($('#downloadEnd').val() || '0')
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.download_task) {
+                // Initialize WebSocket connection for progress tracking
+                initializeDownloadProgress(data.download_task.id);
+
+                // Show progress bars
+                showProgressBars();
+
+                // Update UI state
+                $courseCard.find('.download.button').addClass('disabled');
+                $courseCard.find('.pause.button').removeClass('disabled');
+            } else {
+                throw new Error(data.error || 'Failed to start download');
+            }
+        })
+        .catch(error => {
+            console.error('Download start failed:', error);
+            showAlert('{% trans "Failed to start download:" %} ' + error.message);
+            resetDownloadState();
+        });
+    }
+
+    function showProgressBars() {
+        $courseCard.find('.prepare-downloading').hide();
+        $courseCard.find('.individual.progress, .combined.progress').show();
+        $courseCard.find('.download-quality, .download-speed').show();
+    }
+
+    function resetDownloadState() {
+        $courseCard.find('.prepare-downloading').hide();
+        $courseCard.find('.download.button').removeClass('disabled');
+        $courseCard.find('.pause.button, .resume.button').addClass('disabled');
+        $courseCard.find('.individual.progress, .combined.progress').hide();
+        $courseCard.find('.download-quality, .download-speed').hide();
+    }
+
+    function exportM3U(courseId) {
+        window.open(`/api/courses/${courseId}/export_m3u/`, '_blank');
+    }
+
+    function pauseDownload(courseId) {
+        // Implementation for pause functionality
+        fetch(`/api/downloads/tasks/${getDownloadTaskId(courseId)}/pause/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            $courseCard.find('.pause.button').addClass('disabled');
+            $courseCard.find('.resume.button').removeClass('disabled');
+        })
+        .catch(error => {
+            console.error('Failed to pause download:', error);
+        });
+    }
+
+    function resumeDownload(courseId) {
+        // Implementation for resume functionality
+        fetch(`/api/downloads/tasks/${getDownloadTaskId(courseId)}/resume/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            $courseCard.find('.pause.button').removeClass('disabled');
+            $courseCard.find('.resume.button').addClass('disabled');
+        })
+        .catch(error => {
+            console.error('Failed to resume download:', error);
+        });
+    }
+
+    function dismissDownload(courseId) {
+        $courseCard.fadeOut(300, function() {
+            $(this).remove();
+        });
+    }
+
+    function retryDownload(courseId) {
+        fetch(`/api/downloads/tasks/${getDownloadTaskId(courseId)}/retry/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Reset UI and reinitialize download
+            resetDownloadState();
+            $courseCard.find('.download-error').hide();
+            startDownload(courseId);
+        })
+        .catch(error => {
+            console.error('Failed to retry download:', error);
+        });
+    }
+
+    function getDownloadTaskId(courseId) {
+        // This should be stored when download starts
+        return $courseCard.data('download-task-id');
+    }
+})();
+</script>

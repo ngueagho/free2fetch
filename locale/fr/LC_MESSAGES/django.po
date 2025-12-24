@@ -1,0 +1,563 @@
+# French translation for Udemy Downloader GUI
+# Copyright (C) 2024
+# This file is distributed under the same license as the PACKAGE package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Udemy Downloader GUI\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-01-01 12:00+0000\n"
+"PO-Revision-Date: 2024-01-01 12:00+0000\n"
+"Last-Translator: System <noreply@example.com>\n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# Common terms
+msgid "Loading"
+msgstr "Chargement"
+
+msgid "Error"
+msgstr "Erreur"
+
+msgid "Success"
+msgstr "Succès"
+
+msgid "Settings"
+msgstr "Paramètres"
+
+msgid "About"
+msgstr "À propos"
+
+msgid "Courses"
+msgstr "Cours"
+
+msgid "Downloads"
+msgstr "Téléchargements"
+
+msgid "Logger"
+msgstr "Journal"
+
+msgid "Logout"
+msgstr "Déconnexion"
+
+# Authentication
+msgid "Course Downloader"
+msgstr "Téléchargeur de Cours"
+
+msgid "Download your Udemy courses for offline viewing"
+msgstr "Téléchargez vos cours Udemy pour un visionnage hors ligne"
+
+msgid "Authentication"
+msgstr "Authentification"
+
+msgid "Business Account"
+msgstr "Compte Entreprise"
+
+msgid "Business Subdomain"
+msgstr "Sous-domaine Entreprise"
+
+msgid "Login with Udemy"
+msgstr "Se connecter avec Udemy"
+
+msgid "Use Access Token"
+msgstr "Utiliser le Token d'Accès"
+
+msgid "How to get Access Token?"
+msgstr "Comment obtenir le Token d'Accès ?"
+
+# Courses section
+msgid "My Courses"
+msgstr "Mes Cours"
+
+msgid "Select a course to download"
+msgstr "Sélectionnez un cours à télécharger"
+
+msgid "Search courses..."
+msgstr "Rechercher des cours..."
+
+msgid "Search"
+msgstr "Rechercher"
+
+msgid "Sync Courses"
+msgstr "Synchroniser les Cours"
+
+msgid "All Courses"
+msgstr "Tous les Cours"
+
+msgid "Not Downloaded"
+msgstr "Non Téléchargé"
+
+msgid "Downloaded"
+msgstr "Téléchargé"
+
+msgid "In Progress"
+msgstr "En Cours"
+
+msgid "Sort by Enrollment Date"
+msgstr "Trier par Date d'Inscription"
+
+msgid "Sort by Title"
+msgstr "Trier par Titre"
+
+msgid "Sort by Duration"
+msgstr "Trier par Durée"
+
+msgid "Sort by Progress"
+msgstr "Trier par Progression"
+
+msgid "No courses found"
+msgstr "Aucun cours trouvé"
+
+msgid "Load My Courses"
+msgstr "Charger Mes Cours"
+
+# Download actions
+msgid "Export M3U Playlist"
+msgstr "Exporter la Playlist M3U"
+
+msgid "Download Course"
+msgstr "Télécharger le Cours"
+
+msgid "Pause Download"
+msgstr "Mettre en Pause"
+
+msgid "Resume Download"
+msgstr "Reprendre le Téléchargement"
+
+msgid "Open in Browser"
+msgstr "Ouvrir dans le Navigateur"
+
+msgid "Open Download Folder"
+msgstr "Ouvrir le Dossier de Téléchargement"
+
+msgid "Building Course Data"
+msgstr "Construction des Données du Cours"
+
+msgid "Download finished on"
+msgstr "Téléchargement terminé le"
+
+msgid "Download started since"
+msgstr "Téléchargement commencé depuis"
+
+msgid "Download Finished"
+msgstr "Téléchargement Terminé"
+
+msgid "Click to dismiss"
+msgstr "Cliquez pour ignorer"
+
+msgid "Download Failed"
+msgstr "Échec du Téléchargement"
+
+msgid "Click to retry"
+msgstr "Cliquez pour réessayer"
+
+msgid "Contains DRM protection and cannot be downloaded"
+msgstr "Contient une protection DRM et ne peut pas être téléchargé"
+
+msgid "Dismiss"
+msgstr "Ignorer"
+
+# Download statuses
+msgid "Pending"
+msgstr "En Attente"
+
+msgid "Preparing"
+msgstr "Préparation"
+
+msgid "Downloading"
+msgstr "Téléchargement"
+
+msgid "Paused"
+msgstr "En Pause"
+
+msgid "Completed"
+msgstr "Terminé"
+
+msgid "Failed"
+msgstr "Échoué"
+
+msgid "Cancelled"
+msgstr "Annulé"
+
+# Downloads section
+msgid "Track your download progress"
+msgstr "Suivez la progression de vos téléchargements"
+
+msgid "Total Downloads"
+msgstr "Total des Téléchargements"
+
+msgid "Active"
+msgstr "Actif"
+
+msgid "All Downloads"
+msgstr "Tous les Téléchargements"
+
+msgid "Pause All"
+msgstr "Tout Mettre en Pause"
+
+msgid "Resume All"
+msgstr "Tout Reprendre"
+
+msgid "Clear Completed"
+msgstr "Effacer les Terminés"
+
+msgid "Overall Progress"
+msgstr "Progression Globale"
+
+msgid "Calculating..."
+msgstr "Calcul en cours..."
+
+msgid "No downloads yet"
+msgstr "Aucun téléchargement pour le moment"
+
+msgid "Start downloading courses to see them here."
+msgstr "Commencez à télécharger des cours pour les voir ici."
+
+msgid "Browse Courses"
+msgstr "Parcourir les Cours"
+
+msgid "Download Queue"
+msgstr "File d'Attente de Téléchargement"
+
+msgid "Move Up"
+msgstr "Monter"
+
+msgid "Move Down"
+msgstr "Descendre"
+
+msgid "Remove from Queue"
+msgstr "Retirer de la File"
+
+# Settings section
+msgid "Configure download preferences and application settings"
+msgstr "Configurer les préférences de téléchargement et les paramètres de l'application"
+
+msgid "Download Settings"
+msgstr "Paramètres de Téléchargement"
+
+msgid "Download Directory"
+msgstr "Répertoire de Téléchargement"
+
+msgid "Choose download directory"
+msgstr "Choisir le répertoire de téléchargement"
+
+msgid "Video Quality"
+msgstr "Qualité Vidéo"
+
+msgid "Auto"
+msgstr "Automatique"
+
+msgid "Download Type"
+msgstr "Type de Téléchargement"
+
+msgid "Video and Audio"
+msgstr "Vidéo et Audio"
+
+msgid "Audio Only"
+msgstr "Audio Seulement"
+
+msgid "Video Only"
+msgstr "Vidéo Seulement"
+
+msgid "Create course subfolders"
+msgstr "Créer des sous-dossiers de cours"
+
+msgid "Download captions/subtitles"
+msgstr "Télécharger les sous-titres"
+
+msgid "Concurrent Downloads"
+msgstr "Téléchargements Simultanés"
+
+msgid "Download Speed Limit (MB/s)"
+msgstr "Limite de Vitesse de Téléchargement (MB/s)"
+
+msgid "0 for unlimited"
+msgstr "0 pour illimité"
+
+msgid "Enable lecture range selection"
+msgstr "Activer la sélection de plage de cours"
+
+msgid "Start Lecture"
+msgstr "Cours de Début"
+
+msgid "End Lecture"
+msgstr "Cours de Fin"
+
+msgid "0 for all"
+msgstr "0 pour tous"
+
+msgid "Language Settings"
+msgstr "Paramètres de Langue"
+
+msgid "Interface Language"
+msgstr "Langue de l'Interface"
+
+msgid "Preferred Subtitle Language"
+msgstr "Langue de Sous-titre Préférée"
+
+msgid "Auto (match interface)"
+msgstr "Auto (correspondre à l'interface)"
+
+msgid "Authentication Settings"
+msgstr "Paramètres d'Authentification"
+
+msgid "Udemy Subdomain"
+msgstr "Sous-domaine Udemy"
+
+msgid "For business accounts, use your company subdomain"
+msgstr "Pour les comptes entreprise, utilisez le sous-domaine de votre entreprise"
+
+msgid "Access Token"
+msgstr "Token d'Accès"
+
+msgid "Your Udemy access token"
+msgstr "Votre token d'accès Udemy"
+
+msgid "Test Connection"
+msgstr "Tester la Connexion"
+
+msgid "Application Settings"
+msgstr "Paramètres de l'Application"
+
+msgid "Automatically check for updates"
+msgstr "Vérifier automatiquement les mises à jour"
+
+msgid "Close application after downloads complete"
+msgstr "Fermer l'application après la fin des téléchargements"
+
+msgid "Enable desktop notifications"
+msgstr "Activer les notifications de bureau"
+
+msgid "Enable detailed logging"
+msgstr "Activer la journalisation détaillée"
+
+msgid "Save Settings"
+msgstr "Enregistrer les Paramètres"
+
+msgid "Reset to Defaults"
+msgstr "Rétablir les Valeurs par Défaut"
+
+msgid "Clear Cache"
+msgstr "Vider le Cache"
+
+# About section
+msgid "Application information and support"
+msgstr "Informations sur l'application et support"
+
+msgid "Version"
+msgstr "Version"
+
+msgid "Release Date"
+msgstr "Date de Sortie"
+
+msgid "Technology"
+msgstr "Technologie"
+
+msgid "Source Code"
+msgstr "Code Source"
+
+msgid "View on GitHub"
+msgstr "Voir sur GitHub"
+
+msgid "Features"
+msgstr "Fonctionnalités"
+
+msgid "Download Udemy courses for offline viewing"
+msgstr "Télécharger des cours Udemy pour un visionnage hors ligne"
+
+msgid "Support for multiple video qualities"
+msgstr "Support pour plusieurs qualités vidéo"
+
+msgid "Automatic subtitle/caption downloading"
+msgstr "Téléchargement automatique des sous-titres"
+
+msgid "Resume interrupted downloads"
+msgstr "Reprendre les téléchargements interrompus"
+
+msgid "Concurrent download support"
+msgstr "Support pour téléchargements simultanés"
+
+msgid "M3U8 playlist export"
+msgstr "Exportation de playlists M3U8"
+
+msgid "Real-time progress tracking"
+msgstr "Suivi de progression en temps réel"
+
+msgid "Multi-language support"
+msgstr "Support multi-langues"
+
+msgid "Business account support"
+msgstr "Support pour comptes entreprise"
+
+msgid "DRM content detection"
+msgstr "Détection de contenu DRM"
+
+msgid "System Information"
+msgstr "Informations Système"
+
+msgid "Platform"
+msgstr "Plateforme"
+
+msgid "Memory Usage"
+msgstr "Utilisation Mémoire"
+
+msgid "Cache Size"
+msgstr "Taille du Cache"
+
+msgid "Check for Updates"
+msgstr "Vérifier les Mises à Jour"
+
+msgid "Support & Help"
+msgstr "Support et Aide"
+
+msgid "How to Use"
+msgstr "Comment Utiliser"
+
+msgid "Learn how to download courses"
+msgstr "Apprenez comment télécharger des cours"
+
+msgid "FAQ"
+msgstr "FAQ"
+
+msgid "Frequently asked questions"
+msgstr "Questions fréquemment posées"
+
+msgid "Report Bug"
+msgstr "Signaler un Bug"
+
+msgid "Report issues or request features"
+msgstr "Signaler des problèmes ou demander des fonctionnalités"
+
+msgid "Contact Support"
+msgstr "Contacter le Support"
+
+msgid "Get help via email"
+msgstr "Obtenir de l'aide par e-mail"
+
+msgid "Legal"
+msgstr "Légal"
+
+msgid "License"
+msgstr "Licence"
+
+msgid "MIT License"
+msgstr "Licence MIT"
+
+msgid "Privacy Policy"
+msgstr "Politique de Confidentialité"
+
+msgid "How we handle your data"
+msgstr "Comment nous traitons vos données"
+
+msgid "Disclaimer"
+msgstr "Avertissement"
+
+msgid "This software is for educational purposes only. Respect content creators' rights."
+msgstr "Ce logiciel est à des fins éducatives seulement. Respectez les droits des créateurs de contenu."
+
+# Logger section
+msgid "Application logs and debugging information"
+msgstr "Journaux d'application et informations de débogage"
+
+msgid "Filter"
+msgstr "Filtrer"
+
+msgid "Search logs..."
+msgstr "Rechercher dans les journaux..."
+
+msgid "All Levels"
+msgstr "Tous les Niveaux"
+
+msgid "Debug"
+msgstr "Débogage"
+
+msgid "Info"
+msgstr "Information"
+
+msgid "Warning"
+msgstr "Avertissement"
+
+msgid "Critical"
+msgstr "Critique"
+
+msgid "Auto Scroll"
+msgstr "Défilement Automatique"
+
+msgid "Clear"
+msgstr "Vider"
+
+msgid "Export"
+msgstr "Exporter"
+
+msgid "Refresh"
+msgstr "Actualiser"
+
+msgid "Total Logs"
+msgstr "Total des Journaux"
+
+msgid "Warnings"
+msgstr "Avertissements"
+
+msgid "Errors"
+msgstr "Erreurs"
+
+msgid "Loading logs..."
+msgstr "Chargement des journaux..."
+
+msgid "Log Details"
+msgstr "Détails du Journal"
+
+msgid "Timestamp"
+msgstr "Horodatage"
+
+msgid "Level"
+msgstr "Niveau"
+
+msgid "Message"
+msgstr "Message"
+
+msgid "Stack Trace"
+msgstr "Trace de Pile"
+
+msgid "Metadata"
+msgstr "Métadonnées"
+
+msgid "Close"
+msgstr "Fermer"
+
+msgid "Copy to Clipboard"
+msgstr "Copier dans le Presse-papiers"
+
+# Common messages and confirmations
+msgid "Are you sure you want to cancel this download?"
+msgstr "Êtes-vous sûr de vouloir annuler ce téléchargement ?"
+
+msgid "Are you sure you want to delete this item?"
+msgstr "Êtes-vous sûr de vouloir supprimer cet élément ?"
+
+msgid "Connection lost. Attempting to reconnect..."
+msgstr "Connexion perdue. Tentative de reconnexion..."
+
+msgid "Connection restored"
+msgstr "Connexion rétablie"
+
+msgid "Select subtitle language"
+msgstr "Sélectionner la langue des sous-titres"
+
+msgid "No subtitles available"
+msgstr "Aucun sous-titre disponible"
+
+msgid "Update Available"
+msgstr "Mise à Jour Disponible"
+
+msgid "A new version is available. Would you like to download it?"
+msgstr "Une nouvelle version est disponible. Souhaitez-vous la télécharger ?"
+
+msgid "Later"
+msgstr "Plus Tard"
+
+msgid "Download"
+msgstr "Télécharger"

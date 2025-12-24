@@ -1,0 +1,390 @@
+{% load i18n %}
+
+<div class="ui dividing header">
+    {% trans "About" %}
+    <div class="sub header">{% trans "Application information and support" %}</div>
+</div>
+
+<div class="ui grid">
+    <div class="eight wide column">
+        <div class="ui raised segment">
+            <div class="ui header">
+                <img src="{% load static %}{% static 'images/icon.png' %}" class="ui mini image">
+                <div class="content">
+                    Udeler
+                    <div class="sub header">{% trans "Udemy Course Downloader" %}</div>
+                </div>
+            </div>
+
+            <div class="ui relaxed divided list">
+                <div class="item">
+                    <i class="code icon"></i>
+                    <div class="content">
+                        <div class="header">{% trans "Version" %}</div>
+                        <div class="description">{{ app_version|default:"2.0.0" }}</div>
+                    </div>
+                </div>
+
+                <div class="item">
+                    <i class="calendar icon"></i>
+                    <div class="content">
+                        <div class="header">{% trans "Release Date" %}</div>
+                        <div class="description">{% now "F Y" %}</div>
+                    </div>
+                </div>
+
+                <div class="item">
+                    <i class="python icon"></i>
+                    <div class="content">
+                        <div class="header">{% trans "Technology" %}</div>
+                        <div class="description">Python Django SaaS</div>
+                    </div>
+                </div>
+
+                <div class="item">
+                    <i class="github icon"></i>
+                    <div class="content">
+                        <div class="header">{% trans "Source Code" %}</div>
+                        <div class="description">
+                            <a href="https://github.com/FaisalUmair/udemy-downloader-gui" target="_blank">
+                                {% trans "View on GitHub" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="ui raised segment">
+            <h3 class="ui header">{% trans "Features" %}</h3>
+            <div class="ui bulleted list">
+                <div class="item">{% trans "Download Udemy courses for offline viewing" %}</div>
+                <div class="item">{% trans "Support for multiple video qualities" %}</div>
+                <div class="item">{% trans "Automatic subtitle/caption downloading" %}</div>
+                <div class="item">{% trans "Resume interrupted downloads" %}</div>
+                <div class="item">{% trans "Concurrent download support" %}</div>
+                <div class="item">{% trans "M3U8 playlist export" %}</div>
+                <div class="item">{% trans "Real-time progress tracking" %}</div>
+                <div class="item">{% trans "Multi-language support" %}</div>
+                <div class="item">{% trans "Business account support" %}</div>
+                <div class="item">{% trans "DRM content detection" %}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="eight wide column">
+        <div class="ui raised segment">
+            <h3 class="ui header">{% trans "System Information" %}</h3>
+            <div class="ui relaxed divided list">
+                <div class="item">
+                    <i class="server icon"></i>
+                    <div class="content">
+                        <div class="header">{% trans "Platform" %}</div>
+                        <div class="description" id="platformInfo">{% trans "Loading..." %}</div>
+                    </div>
+                </div>
+
+                <div class="item">
+                    <i class="memory icon"></i>
+                    <div class="content">
+                        <div class="header">{% trans "Memory Usage" %}</div>
+                        <div class="description" id="memoryInfo">{% trans "Loading..." %}</div>
+                    </div>
+                </div>
+
+                <div class="item">
+                    <i class="database icon"></i>
+                    <div class="content">
+                        <div class="header">{% trans "Cache Size" %}</div>
+                        <div class="description" id="cacheInfo">{% trans "Loading..." %}</div>
+                    </div>
+                </div>
+
+                <div class="item">
+                    <i class="download icon"></i>
+                    <div class="content">
+                        <div class="header">{% trans "Total Downloads" %}</div>
+                        <div class="description" id="downloadStats">{% trans "Loading..." %}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ui divider"></div>
+
+            <button class="ui fluid primary button" id="checkUpdates">
+                <i class="refresh icon"></i>
+                {% trans "Check for Updates" %}
+            </button>
+        </div>
+
+        <div class="ui raised segment">
+            <h3 class="ui header">{% trans "Support & Help" %}</h3>
+            <div class="ui relaxed divided list">
+                <div class="item">
+                    <i class="help circle icon"></i>
+                    <div class="content">
+                        <div class="header">
+                            <a href="#" id="showHelp">{% trans "How to Use" %}</a>
+                        </div>
+                        <div class="description">{% trans "Learn how to download courses" %}</div>
+                    </div>
+                </div>
+
+                <div class="item">
+                    <i class="question circle icon"></i>
+                    <div class="content">
+                        <div class="header">
+                            <a href="#" id="showFaq">{% trans "FAQ" %}</a>
+                        </div>
+                        <div class="description">{% trans "Frequently asked questions" %}</div>
+                    </div>
+                </div>
+
+                <div class="item">
+                    <i class="bug icon"></i>
+                    <div class="content">
+                        <div class="header">
+                            <a href="https://github.com/FaisalUmair/udemy-downloader-gui/issues" target="_blank">
+                                {% trans "Report Bug" %}
+                            </a>
+                        </div>
+                        <div class="description">{% trans "Report issues or request features" %}</div>
+                    </div>
+                </div>
+
+                <div class="item">
+                    <i class="mail icon"></i>
+                    <div class="content">
+                        <div class="header">
+                            <a href="mailto:support@udeler.app">{% trans "Contact Support" %}</a>
+                        </div>
+                        <div class="description">{% trans "Get help via email" %}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="ui raised segment">
+            <h3 class="ui header">{% trans "Legal" %}</h3>
+            <div class="ui relaxed divided list">
+                <div class="item">
+                    <i class="file text icon"></i>
+                    <div class="content">
+                        <div class="header">
+                            <a href="#" id="showLicense">{% trans "License" %}</a>
+                        </div>
+                        <div class="description">{% trans "MIT License" %}</div>
+                    </div>
+                </div>
+
+                <div class="item">
+                    <i class="shield icon"></i>
+                    <div class="content">
+                        <div class="header">
+                            <a href="#" id="showPrivacy">{% trans "Privacy Policy" %}</a>
+                        </div>
+                        <div class="description">{% trans "How we handle your data" %}</div>
+                    </div>
+                </div>
+
+                <div class="item">
+                    <i class="warning sign icon"></i>
+                    <div class="content">
+                        <div class="header">{% trans "Disclaimer" %}</div>
+                        <div class="description">
+                            {% trans "This software is for educational purposes only. Respect content creators' rights." %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Help Modal -->
+<div class="ui modal" id="helpModal">
+    <div class="header">{% trans "How to Use Udeler" %}</div>
+    <div class="content">
+        <div class="ui ordered list">
+            <div class="item">
+                <div class="content">
+                    <div class="header">{% trans "Authentication" %}</div>
+                    <div class="description">
+                        {% trans "Login with your Udemy credentials or use an access token. For business accounts, specify your company subdomain." %}
+                    </div>
+                </div>
+            </div>
+            <div class="item">
+                <div class="content">
+                    <div class="header">{% trans "Browse Courses" %}</div>
+                    <div class="description">
+                        {% trans "Your enrolled courses will be automatically loaded. Use the search function to find specific courses." %}
+                    </div>
+                </div>
+            </div>
+            <div class="item">
+                <div class="content">
+                    <div class="header">{% trans "Download" %}</div>
+                    <div class="description">
+                        {% trans "Click the download button on any course. Select video quality and subtitle preferences." %}
+                    </div>
+                </div>
+            </div>
+            <div class="item">
+                <div class="content">
+                    <div class="header">{% trans "Monitor Progress" %}</div>
+                    <div class="description">
+                        {% trans "Track download progress in real-time. Pause, resume, or cancel downloads as needed." %}
+                    </div>
+                </div>
+            </div>
+            <div class="item">
+                <div class="content">
+                    <div class="header">{% trans "Access Files" %}</div>
+                    <div class="description">
+                        {% trans "Once completed, use the folder icon to open the download directory." %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <div class="ui cancel button">{% trans "Close" %}</div>
+    </div>
+</div>
+
+<!-- FAQ Modal -->
+<div class="ui modal" id="faqModal">
+    <div class="header">{% trans "Frequently Asked Questions" %}</div>
+    <div class="content">
+        <div class="ui styled accordion">
+            <div class="title">
+                <i class="dropdown icon"></i>
+                {% trans "How do I get an access token?" %}
+            </div>
+            <div class="content">
+                <p>{% trans "1. Login to Udemy in your browser" %}</p>
+                <p>{% trans "2. Open browser developer tools (F12)" %}</p>
+                <p>{% trans "3. Go to Application/Storage > Cookies > udemy.com" %}</p>
+                <p>{% trans "4. Find and copy the 'access_token' value" %}</p>
+            </div>
+
+            <div class="title">
+                <i class="dropdown icon"></i>
+                {% trans "Why can't I download some courses?" %}
+            </div>
+            <div class="content">
+                <p>{% trans "Some courses contain DRM-protected content that cannot be downloaded. These are marked with a lock icon." %}</p>
+            </div>
+
+            <div class="title">
+                <i class="dropdown icon"></i>
+                {% trans "Download speed is slow. What can I do?" %}
+            </div>
+            <div class="content">
+                <p>{% trans "Try reducing video quality, decreasing concurrent downloads, or checking your internet connection." %}</p>
+            </div>
+
+            <div class="title">
+                <i class="dropdown icon"></i>
+                {% trans "Can I resume interrupted downloads?" %}
+            </div>
+            <div class="content">
+                <p>{% trans "Yes, interrupted downloads will automatically resume from where they left off." %}</p>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <div class="ui cancel button">{% trans "Close" %}</div>
+    </div>
+</div>
+
+<script>
+// About section JavaScript
+(function() {
+    // Load system information
+    loadSystemInfo();
+
+    // Accordion behavior
+    $('.ui.accordion').accordion();
+
+    // Check updates button
+    $('#checkUpdates').on('click', function() {
+        const button = $(this);
+        const originalText = button.html();
+
+        button.addClass('loading disabled');
+
+        fetch('/api/system/check-updates/')
+            .then(response => response.json())
+            .then(data => {
+                button.removeClass('loading disabled').html(originalText);
+
+                if (data.update_available) {
+                    showUpdateModal(data.latest_version, data.download_url, data.release_notes);
+                } else {
+                    showAlert('{% trans "You are using the latest version!" %}', 'positive');
+                }
+            })
+            .catch(error => {
+                button.removeClass('loading disabled').html(originalText);
+                showAlert('{% trans "Failed to check for updates:" %} ' + error.message, 'negative');
+            });
+    });
+
+    // Help and info modals
+    $('#showHelp').on('click', function(e) {
+        e.preventDefault();
+        $('#helpModal').modal('show');
+    });
+
+    $('#showFaq').on('click', function(e) {
+        e.preventDefault();
+        $('#faqModal').modal('show');
+    });
+
+    $('#showLicense').on('click', function(e) {
+        e.preventDefault();
+        showAlert('{% trans "MIT License - Free to use and modify" %}', 'info');
+    });
+
+    $('#showPrivacy').on('click', function(e) {
+        e.preventDefault();
+        showAlert('{% trans "We respect your privacy. No data is collected or shared." %}', 'info');
+    });
+
+    function loadSystemInfo() {
+        fetch('/api/system/info/')
+            .then(response => response.json())
+            .then(data => {
+                $('#platformInfo').text(data.platform || '{% trans "Unknown" %}');
+                $('#memoryInfo').text(formatBytes(data.memory_usage || 0));
+                $('#cacheInfo').text(formatBytes(data.cache_size || 0));
+                $('#downloadStats').text(data.total_downloads || 0);
+            })
+            .catch(error => {
+                console.error('Failed to load system info:', error);
+            });
+    }
+
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function showUpdateModal(version, downloadUrl, releaseNotes) {
+        $('.ui.update-available.modal').modal({
+            onApprove: function() {
+                window.open(downloadUrl, '_blank');
+            }
+        }).modal('show');
+
+        $('.ui.update-available.modal .content p').html(
+            '{% trans "Version" %} ' + version + ' {% trans "is available. Would you like to download it?" %}'
+        );
+    }
+})();
+</script>

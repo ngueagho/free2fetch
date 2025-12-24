@@ -1,0 +1,120 @@
+INFO 2025-12-24 19:29:57,782 autoreload 1228899 128033136840832 Watching for file changes with StatReloader
+INFO 2025-12-24 19:32:03,082 autoreload 1229829 125334975844480 Watching for file changes with StatReloader
+INFO 2025-12-24 19:43:02,599 autoreload 1235043 139152495718528 Watching for file changes with StatReloader
+ERROR 2025-12-24 19:44:47,802 log 1235043 139152309876416 Internal Server Error: /
+Traceback (most recent call last):
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    compile_func = self.tags[command]
+                   ~~~~~~~~~^^^^^^^^^
+KeyError: 'get_current_language'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/core/handlers/base.py", line 220, in _get_response
+    response = response.render()
+               ^^^^^^^^^^^^^^^^^
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/template/response.py", line 114, in render
+    self.content = self.rendered_content
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/template/response.py", line 90, in rendered_content
+    template = self.resolve_template(self.template_name)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/template/response.py", line 72, in resolve_template
+    return select_template(template, using=self.using)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/template/loader.py", line 42, in select_template
+    return engine.get_template(template_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/template/backends/django.py", line 79, in get_template
+    return Template(self.engine.get_template(template_name), self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/template/engine.py", line 177, in get_template
+    template, origin = self.find_template(template_name)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/template/engine.py", line 159, in find_template
+    template = loader.get_template(name, skip=skip)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/template/loaders/cached.py", line 57, in get_template
+    template = super().get_template(template_name, skip)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/template/loaders/base.py", line 28, in get_template
+    return Template(
+           ^^^^^^^^^
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/template/base.py", line 154, in __init__
+    self.nodelist = self.compile_nodelist()
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/template/base.py", line 196, in compile_nodelist
+    nodelist = parser.parse()
+               ^^^^^^^^^^^^^^
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/template/base.py", line 512, in parse
+    self.invalid_block_tag(token, command, parse_until)
+  File "/home/roberto/.local/lib/python3.12/site-packages/django/template/base.py", line 577, in invalid_block_tag
+    raise self.error(
+django.template.exceptions.TemplateSyntaxError: Invalid block tag on line 2: 'get_current_language'. Did you forget to register or load this tag?
+ERROR 2025-12-24 19:44:47,818 basehttp 1235043 139152309876416 "GET / HTTP/1.1" 500 178063
+INFO 2025-12-24 19:46:07,260 basehttp 1235043 139152309876416 "GET / HTTP/1.1" 200 55398
+INFO 2025-12-24 19:47:12,858 basehttp 1235043 139152309876416 "GET / HTTP/1.1" 200 55398
+WARNING 2025-12-24 19:48:04,181 log 1235043 139152309876416 Unauthorized: /api/
+WARNING 2025-12-24 19:48:04,183 basehttp 1235043 139152309876416 "GET /api/ HTTP/1.1" 401 58
+INFO 2025-12-24 19:48:50,817 basehttp 1235043 139152309876416 "GET / HTTP/1.1" 200 55408
+INFO 2025-12-24 19:48:51,162 basehttp 1235043 139152309876416 "GET /static/css/app.css HTTP/1.1" 200 10218
+WARNING 2025-12-24 19:48:51,280 basehttp 1235043 139152301483712 "GET /static/images/icon.png HTTP/1.1" 404 1859
+INFO 2025-12-24 19:48:51,316 basehttp 1235043 139152293091008 "GET /static/js/websocket-client.js HTTP/1.1" 200 16037
+INFO 2025-12-24 19:48:51,326 basehttp 1235043 139152284698304 "GET /static/js/app.js HTTP/1.1" 200 18968
+WARNING 2025-12-24 19:48:54,316 basehttp 1235043 139152284698304 "GET /static/images/icon.png HTTP/1.1" 404 1859
+WARNING 2025-12-24 19:48:54,328 log 1235043 139152293091008 Not Found: /api/system/info/
+WARNING 2025-12-24 19:48:54,336 basehttp 1235043 139152293091008 "GET /api/system/info/ HTTP/1.1" 404 8083
+WARNING 2025-12-24 19:48:56,841 basehttp 1235043 139152293091008 "GET /static/images/icon.png HTTP/1.1" 404 1859
+WARNING 2025-12-24 19:49:07,189 log 1235043 139152309876416 Not Found: /api/auth/udemy-login/
+WARNING 2025-12-24 19:49:07,196 basehttp 1235043 139152309876416 "GET /api/auth/udemy-login/ HTTP/1.1" 404 12952
+WARNING 2025-12-24 19:49:07,410 log 1235043 139152309876416 Not Found: /favicon.ico
+WARNING 2025-12-24 19:49:07,418 basehttp 1235043 139152309876416 "GET /favicon.ico HTTP/1.1" 404 6745
+INFO 2025-12-24 19:54:00,483 autoreload 1235043 139152495718528 /home/roberto/.ZAP/udemy-downloader-gui/python_saas/apps/users/urls.py changed, reloading.
+INFO 2025-12-24 19:54:03,866 autoreload 1240274 123298577399936 Watching for file changes with StatReloader
+INFO 2025-12-24 19:54:59,985 autoreload 1240274 123298577399936 /home/roberto/.ZAP/udemy-downloader-gui/python_saas/apps/users/views.py changed, reloading.
+INFO 2025-12-24 19:55:02,726 autoreload 1240718 125801647853696 Watching for file changes with StatReloader
+INFO 2025-12-24 19:56:44,209 autoreload 1240718 125801647853696 /home/roberto/.ZAP/udemy-downloader-gui/python_saas/apps/users/views.py changed, reloading.
+INFO 2025-12-24 19:56:47,326 autoreload 1241574 124302214205568 Watching for file changes with StatReloader
+INFO 2025-12-24 19:58:59,468 autoreload 1241574 124302214205568 /home/roberto/.ZAP/udemy-downloader-gui/python_saas/apps/users/views.py changed, reloading.
+INFO 2025-12-24 19:59:03,309 autoreload 1242609 139798488879232 Watching for file changes with StatReloader
+INFO 2025-12-24 19:59:42,335 autoreload 1242609 139798488879232 /home/roberto/.ZAP/udemy-downloader-gui/python_saas/apps/core/services/udemy_service.py changed, reloading.
+INFO 2025-12-24 19:59:45,809 autoreload 1242932 123649637924992 Watching for file changes with StatReloader
+INFO 2025-12-24 19:59:56,986 autoreload 1242932 123649637924992 /home/roberto/.ZAP/udemy-downloader-gui/python_saas/apps/core/services/udemy_service.py changed, reloading.
+INFO 2025-12-24 20:00:00,812 autoreload 1243017 131073142489216 Watching for file changes with StatReloader
+INFO 2025-12-24 20:00:10,013 autoreload 1243017 131073142489216 /home/roberto/.ZAP/udemy-downloader-gui/python_saas/apps/core/services/udemy_service.py changed, reloading.
+INFO 2025-12-24 20:00:13,921 autoreload 1243163 132574553837696 Watching for file changes with StatReloader
+INFO 2025-12-24 20:00:46,909 autoreload 1243163 132574553837696 /home/roberto/.ZAP/udemy-downloader-gui/python_saas/apps/courses/views.py changed, reloading.
+INFO 2025-12-24 20:00:50,451 autoreload 1243438 134557089382528 Watching for file changes with StatReloader
+INFO 2025-12-24 20:00:58,871 autoreload 1243438 134557089382528 /home/roberto/.ZAP/udemy-downloader-gui/python_saas/apps/courses/views.py changed, reloading.
+INFO 2025-12-24 20:01:02,559 autoreload 1243523 134322457038976 Watching for file changes with StatReloader
+INFO 2025-12-24 20:01:11,421 autoreload 1243523 134322457038976 /home/roberto/.ZAP/udemy-downloader-gui/python_saas/apps/courses/views.py changed, reloading.
+INFO 2025-12-24 20:01:16,639 autoreload 1243619 140587231887488 Watching for file changes with StatReloader
+INFO 2025-12-24 20:04:29,450 autoreload 1243619 140587231887488 /home/roberto/.ZAP/udemy-downloader-gui/python_saas/apps/downloads/tasks.py changed, reloading.
+INFO 2025-12-24 20:05:36,854 autoreload 1244734 125707951505536 Watching for file changes with StatReloader
+INFO 2025-12-24 22:41:44,448 autoreload 8883 132822839238784 Watching for file changes with StatReloader
+INFO 2025-12-24 22:41:56,464 basehttp 8883 132822656349888 "GET / HTTP/1.1" 200 55398
+INFO 2025-12-24 22:41:57,281 basehttp 8883 132822656349888 "GET /static/css/app.css HTTP/1.1" 200 10218
+INFO 2025-12-24 22:41:57,294 basehttp 8883 132822638515904 "GET /static/js/app.js HTTP/1.1" 200 18968
+INFO 2025-12-24 22:41:57,344 basehttp 8883 132822646908608 "GET /static/js/websocket-client.js HTTP/1.1" 200 16037
+WARNING 2025-12-24 22:42:01,087 basehttp 8883 132822638515904 "GET /static/images/icon.png HTTP/1.1" 404 1859
+WARNING 2025-12-24 22:42:02,812 basehttp 8883 132822646908608 "GET /static/images/icon.png HTTP/1.1" 404 1859
+WARNING 2025-12-24 22:42:02,875 log 8883 132822656349888 Not Found: /api/system/info/
+WARNING 2025-12-24 22:42:02,877 basehttp 8883 132822656349888 "GET /api/system/info/ HTTP/1.1" 404 8083
+WARNING 2025-12-24 22:42:03,706 basehttp 8883 132822656349888 "GET /static/images/icon.png HTTP/1.1" 404 1859
+INFO 2025-12-24 22:44:32,688 basehttp 8883 132822656349888 "GET /api/auth/udemy-login/ HTTP/1.1" 200 12562
+INFO 2025-12-24 22:44:33,020 basehttp 8883 132822646908608 "GET /static/rest_framework/css/bootstrap-tweaks.css HTTP/1.1" 200 3426
+INFO 2025-12-24 22:44:33,043 basehttp 8883 132822638515904 "GET /static/rest_framework/css/default.css HTTP/1.1" 200 1152
+INFO 2025-12-24 22:44:33,047 basehttp 8883 132822630123200 "GET /static/rest_framework/css/prettify.css HTTP/1.1" 200 817
+INFO 2025-12-24 22:44:33,068 basehttp 8883 132822646908608 "GET /static/rest_framework/js/csrf.js HTTP/1.1" 200 1793
+INFO 2025-12-24 22:44:33,092 basehttp 8883 132822630123200 "GET /static/rest_framework/js/bootstrap.min.js HTTP/1.1" 200 39680
+INFO 2025-12-24 22:44:33,093 basehttp 8883 132822612289216 "GET /static/rest_framework/js/ajax-form.js HTTP/1.1" 200 3796
+INFO 2025-12-24 22:44:33,094 basehttp 8883 132822638515904 "GET /static/rest_framework/js/prettify-min.js HTTP/1.1" 200 13632
+INFO 2025-12-24 22:44:33,120 basehttp 8883 132822620681920 "GET /static/rest_framework/js/jquery-3.7.1.min.js HTTP/1.1" 200 87533
+INFO 2025-12-24 22:44:33,121 basehttp 8883 132822656349888 "GET /static/rest_framework/css/bootstrap.min.css HTTP/1.1" 200 121457
+INFO 2025-12-24 22:44:33,131 basehttp 8883 132822612289216 "GET /static/rest_framework/js/default.js HTTP/1.1" 200 1268
+INFO 2025-12-24 22:44:33,132 basehttp 8883 132822646908608 "GET /static/rest_framework/js/load-ajax-form.js HTTP/1.1" 200 59
+INFO 2025-12-24 22:44:33,345 basehttp 8883 132822620681920 "GET /static/rest_framework/img/grid.png HTTP/1.1" 200 1458

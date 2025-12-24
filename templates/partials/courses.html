@@ -1,0 +1,264 @@
+{% load i18n %}
+
+<div class="ui dividing header">
+    {% trans "My Courses" %}
+    <div class="sub header">{% trans "Select a course to download" %}</div>
+</div>
+
+<!-- Search and Filters -->
+<div class="ui stackable grid">
+    <div class="twelve wide column">
+        <form class="ui search form" hx-post="/api/courses/search/" hx-target="#coursesContainer" hx-indicator="#searchLoading">
+            <div class="ui action input">
+                <input type="text" name="query" placeholder="{% trans 'Search courses...' %}" value="{{ request.GET.query }}">
+                <button type="submit" class="ui primary button">
+                    <i class="search icon"></i>
+                    {% trans "Search" %}
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="four wide column">
+        <div class="ui labeled button" tabindex="0">
+            <div class="ui button" id="syncCourses">
+                <i class="sync alternate icon"></i>
+                {% trans "Sync Courses" %}
+            </div>
+            <span class="ui basic label" id="courseCount">
+                {{ courses|length }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Loading indicator -->
+<div class="ui active centered inline loader" id="searchLoading" style="display: none;">
+    {% trans "Searching..." %}
+</div>
+
+<div class="ui divider"></div>
+
+<!-- Filters -->
+<div class="ui secondary pointing menu">
+    <a class="item active" data-filter="all">
+        {% trans "All Courses" %}
+    </a>
+    <a class="item" data-filter="not_downloaded">
+        {% trans "Not Downloaded" %}
+    </a>
+    <a class="item" data-filter="downloaded">
+        {% trans "Downloaded" %}
+    </a>
+    <a class="item" data-filter="in_progress">
+        {% trans "In Progress" %}
+    </a>
+    <div class="right menu">
+        <div class="item">
+            <select class="ui compact dropdown" id="sortBy">
+                <option value="enrolled_at">{% trans "Sort by Enrollment Date" %}</option>
+                <option value="title">{% trans "Sort by Title" %}</option>
+                <option value="duration">{% trans "Sort by Duration" %}</option>
+                <option value="progress">{% trans "Sort by Progress" %}</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Courses Container -->
+<div class="ui courses items" id="coursesContainer">
+    {% if courses %}
+        {% for course in courses %}
+            {% include 'partials/course_card.html' %}
+        {% endfor %}
+    {% else %}
+        <div class="ui placeholder segment">
+            <div class="ui icon header">
+                <i class="book icon"></i>
+                {% trans "No courses found" %}
+            </div>
+            <div class="inline">
+                <div class="ui primary button" id="loadCourses">
+                    <i class="refresh icon"></i>
+                    {% trans "Load My Courses" %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Pagination -->
+{% if courses.has_other_pages %}
+<div class="ui center aligned segment">
+    <div class="ui pagination menu">
+        {% if courses.has_previous %}
+            <a class="icon item" hx-get="?page={{ courses.previous_page_number }}" hx-target="#coursesContainer">
+                <i class="left chevron icon"></i>
+            </a>
+        {% endif %}
+
+        {% for num in courses.paginator.page_range %}
+            {% if courses.number == num %}
+                <div class="active item">{{ num }}</div>
+            {% else %}
+                <a class="item" hx-get="?page={{ num }}" hx-target="#coursesContainer">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if courses.has_next %}
+            <a class="icon item" hx-get="?page={{ courses.next_page_number }}" hx-target="#coursesContainer">
+                <i class="right chevron icon"></i>
+            </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<script>
+// Courses section JavaScript
+(function() {
+    // Initialize dropdowns
+    $('.ui.dropdown').dropdown();
+
+    // Filter functionality
+    $('.ui.secondary.menu .item[data-filter]').on('click', function() {
+        const filter = $(this).data('filter');
+        $('.ui.secondary.menu .item').removeClass('active');
+        $(this).addClass('active');
+
+        filterCourses(filter);
+    });
+
+    // Sort functionality
+    $('#sortBy').on('change', function() {
+        const sortBy = $(this).val();
+        sortCourses(sortBy);
+    });
+
+    // Sync courses
+    $('#syncCourses').on('click', function() {
+        const button = $(this);
+        const originalText = button.html();
+
+        button.addClass('loading disabled');
+
+        fetch('/api/courses/sync/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            button.removeClass('loading disabled').html(originalText);
+
+            if (data.success) {
+                // Reload courses
+                location.reload();
+                showAlert(`{% trans "Synchronized" %} ${data.courses_count} {% trans "courses" %}`, 'positive');
+            } else {
+                showAlert('{% trans "Failed to sync courses:" %} ' + data.error, 'negative');
+            }
+        })
+        .catch(error => {
+            button.removeClass('loading disabled').html(originalText);
+            showAlert('{% trans "Sync failed:" %} ' + error.message, 'negative');
+        });
+    });
+
+    // Load courses button
+    $('#loadCourses').on('click', function() {
+        $('#syncCourses').click();
+    });
+
+    function filterCourses(filter) {
+        const $courses = $('.course.item');
+
+        $courses.each(function() {
+            const $course = $(this);
+            const isDownloaded = $course.attr('course-completed') === 'true';
+            const hasActiveDownload = $course.find('.download.button').hasClass('disabled');
+
+            let show = true;
+
+            switch(filter) {
+                case 'downloaded':
+                    show = isDownloaded;
+                    break;
+                case 'not_downloaded':
+                    show = !isDownloaded;
+                    break;
+                case 'in_progress':
+                    show = hasActiveDownload;
+                    break;
+                case 'all':
+                default:
+                    show = true;
+                    break;
+            }
+
+            if (show) {
+                $course.show();
+            } else {
+                $course.hide();
+            }
+        });
+
+        updateCourseCount();
+    }
+
+    function sortCourses(sortBy) {
+        const $container = $('#coursesContainer');
+        const $courses = $('.course.item').detach();
+
+        $courses.sort(function(a, b) {
+            const $a = $(a);
+            const $b = $(b);
+
+            switch(sortBy) {
+                case 'title':
+                    return $a.find('.coursename').text().localeCompare($b.find('.coursename').text());
+                case 'duration':
+                    // Assuming duration data is available
+                    const durationA = parseInt($a.data('duration') || 0);
+                    const durationB = parseInt($b.data('duration') || 0);
+                    return durationB - durationA;
+                case 'progress':
+                    const progressA = $a.attr('course-completed') === 'true' ? 1 : 0;
+                    const progressB = $b.attr('course-completed') === 'true' ? 1 : 0;
+                    return progressB - progressA;
+                case 'enrolled_at':
+                default:
+                    // Default sort by enrollment date (newest first)
+                    return 0; // Maintain original order
+            }
+        });
+
+        $container.append($courses);
+    }
+
+    function updateCourseCount() {
+        const visibleCourses = $('.course.item:visible').length;
+        $('#courseCount').text(visibleCourses);
+    }
+
+    // Search form enhancement
+    $('form.search').on('submit', function(e) {
+        $('#searchLoading').show();
+    });
+
+    // Handle HTMX events
+    $(document).on('htmx:afterRequest', function(event) {
+        if (event.detail.target.id === 'coursesContainer') {
+            $('#searchLoading').hide();
+            // Reinitialize any new course cards
+            initializeCourseCards();
+        }
+    });
+
+    function initializeCourseCards() {
+        // This function would be called to initialize any JavaScript
+        // functionality for newly loaded course cards
+        $('.ui.dropdown').dropdown();
+    }
+})();
+</script>
