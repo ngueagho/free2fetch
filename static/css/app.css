@@ -1,531 +1,145 @@
-/**
- * Custom CSS for Udemy Downloader GUI
- * Extends Semantic UI with custom styles
- */
+/* Custom CSS for Udemy Downloader */
 
-/* Global Styles */
-body {
-    font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f8f9fa;
+/* Main layout */
+.dashboard {
+    min-height: 100vh;
 }
 
-.ui.container {
-    max-width: none !important;
-    width: 98% !important;
-}
-
-/* Custom header styles */
-.ui.top.attached.menu {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-}
-
-.ui.top.attached.menu .item {
-    color: white !important;
-}
-
-.ui.top.attached.menu .dropdown.item:hover,
-.ui.top.attached.menu .dropdown.item.active {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Sidebar styles */
 .sidebar .item {
-    border-radius: 0.28571429rem !important;
-    margin: 0.1em 0.5em !important;
-}
-
-.sidebar .item.active.purple {
-    background-color: #6435c9 !important;
-    color: white !important;
+    transition: all 0.3s ease;
 }
 
 .sidebar .item:hover {
-    background-color: rgba(100, 53, 201, 0.1) !important;
+    background-color: #f8f9fa;
 }
 
-/* Course card styles */
+.sidebar .item.active {
+    background-color: #6435c9;
+    color: white;
+}
+
+/* Login section */
+.login.grid {
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+}
+
+.login .massive.header {
+    margin-bottom: 2rem;
+}
+
+.login .massive.header .image {
+    margin-bottom: 1rem;
+}
+
+/* Content sections */
+.content .section {
+    padding: 1rem;
+    min-height: 500px;
+}
+
+/* Course items */
 .course.item {
+    border: 1px solid #e1e1e1;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
     transition: all 0.3s ease;
-    border-radius: 8px !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-    background: white;
-    margin-bottom: 1rem !important;
 }
 
 .course.item:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     transform: translateY(-2px);
 }
 
-.course.item .image.wrapper {
-    position: relative;
+.course.item[data-download-status="downloading"] {
+    border-left: 4px solid #2185d0;
 }
 
-.course.item .image.wrapper .tooltip {
-    position: absolute;
-    bottom: -30px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-    white-space: nowrap;
-    z-index: 10;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
+.course.item[data-download-status="completed"] {
+    border-left: 4px solid #21ba45;
 }
 
-.course.item .image.wrapper:hover .tooltip {
-    opacity: 1;
-}
-
-.course.item .course-image {
-    width: 150px;
-    height: 84px;
-    object-fit: cover;
-    border-radius: 4px;
-}
-
-.course.item .border-radius {
-    border-radius: 4px !important;
-}
-
-.course.item .coursename {
-    font-weight: 600 !important;
-    font-size: 1.1em !important;
-    color: #2c3e50 !important;
-    line-height: 1.4 !important;
-    margin-bottom: 0.5em !important;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+.course.item[data-download-status="failed"] {
+    border-left: 4px solid #db2828;
 }
 
 /* Progress bars */
-.ui.progress {
-    margin: 0.5em 0 !important;
+.progress.bar {
+    transition: width 0.3s ease;
 }
 
-.ui.progress.individual {
-    background-color: #e8e8e8;
+.progress.success .bar {
+    background: #21ba45;
 }
 
-.ui.progress.combined {
-    background-color: #f0f0f0;
+.progress.error .bar {
+    background: #db2828;
 }
 
-.ui.indicating.progress .bar {
-    background: linear-gradient(90deg, #21ba45, #16ab39);
-}
-
-.ui.indicating.progress.prepare-downloading {
-    background: linear-gradient(90deg, #2185d0, #1678c2);
-}
-
-/* Download status messages */
-.download-success.message {
-    border-left: 4px solid #21ba45 !important;
-}
-
-.download-error.message {
-    border-left: 4px solid #db2828 !important;
-}
-
-.course-encrypted.message {
-    border-left: 4px solid #a333c8 !important;
-}
-
-/* Action buttons */
-.ui.action.buttons {
-    margin: 0.5em 0 !important;
-}
-
-.ui.action.buttons .button {
-    padding: 0.6em 0.8em !important;
-    margin: 0 2px !important;
-}
-
-/* Download indicators */
-.download-quality {
-    position: absolute !important;
-    top: 10px !important;
-    left: 10px !important;
-    z-index: 5;
-}
-
-.download-speed {
-    position: absolute !important;
-    top: 10px !important;
-    right: 10px !important;
-    z-index: 5;
-}
-
-/* Corner labels for DRM */
-.ui.red.left.corner.label.icon-encrypted {
-    background-color: #db2828 !important;
-}
-
-/* Statistics */
-.ui.statistics {
-    margin: 1em 0 !important;
-}
-
-.ui.statistics .statistic {
-    margin: 0 1em !important;
-}
-
-.ui.statistics .statistic .value {
-    font-size: 2rem !important;
-    font-weight: 600 !important;
-}
-
-/* Forms */
-.ui.form .field > label {
-    font-weight: 600 !important;
-    color: #34495e !important;
-}
-
-.ui.form .field .ui.input input,
-.ui.form .field .ui.dropdown,
-.ui.form textarea {
-    border-radius: 6px !important;
-    border: 1px solid #ddd !important;
-}
-
-.ui.form .field .ui.input input:focus,
-.ui.form .field .ui.dropdown.active,
-.ui.form textarea:focus {
-    border-color: #6435c9 !important;
-    box-shadow: 0 0 0 2px rgba(100, 53, 201, 0.2) !important;
-}
-
-/* Modals */
-.ui.modal {
-    border-radius: 8px !important;
-}
-
-.ui.modal > .header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white !important;
-    border-radius: 8px 8px 0 0 !important;
+/* Buttons */
+.ui.button.loading {
+    pointer-events: none;
 }
 
 /* Alerts */
 .ui.message.alert {
-    border-radius: 6px !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-    animation: slideInRight 0.3s ease-out;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    max-width: 400px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
 }
 
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+/* Modals */
+.ui.modal .header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
 }
 
-/* Loading states */
-.ui.loading.button {
-    pointer-events: none !important;
+/* Download items */
+.download-item {
+    border: 1px solid #e1e1e1;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
 }
 
-.ui.dimmer {
-    background-color: rgba(255, 255, 255, 0.9) !important;
+.download-item.downloading {
+    border-left: 4px solid #2185d0;
+    background: #f8ffff;
 }
 
-.ui.dimmer .loader {
-    color: #6435c9 !important;
+.download-item.completed {
+    border-left: 4px solid #21ba45;
+    background: #f8fff8;
+}
+
+.download-item.failed {
+    border-left: 4px solid #db2828;
+    background: #fff8f8;
 }
 
 /* Responsive design */
-@media only screen and (max-width: 768px) {
-    .ui.container {
-        width: 99% !important;
-        margin: 0.5em auto !important;
+@media (max-width: 768px) {
+    .ui.grid > .three.wide.column {
+        width: 100% !important;
     }
 
-    .ui.grid > .column {
-        padding: 0.5rem !important;
+    .ui.grid > .thirteen.wide.column {
+        width: 100% !important;
     }
 
-    .course.item .course-image {
-        width: 120px;
-        height: 67px;
+    .sidebar.menu {
+        display: flex;
+        overflow-x: auto;
+        margin-bottom: 1rem;
     }
 
-    .ui.action.buttons {
-        flex-wrap: wrap;
+    .sidebar.menu .item {
+        flex: 0 0 auto;
+        white-space: nowrap;
     }
-
-    .ui.action.buttons .button {
-        margin: 2px !important;
-        padding: 0.5em 0.6em !important;
-    }
-
-    .ui.statistics {
-        justify-content: center !important;
-    }
-
-    .ui.statistics .statistic {
-        margin: 0 0.5em !important;
-    }
-
-    .ui.statistics .statistic .value {
-        font-size: 1.5rem !important;
-    }
-}
-
-/* Dark theme support */
-@media (prefers-color-scheme: dark) {
-    body {
-        background-color: #1a1a1a;
-        color: #e0e0e0;
-    }
-
-    .course.item {
-        background-color: #2d2d2d !important;
-        color: #e0e0e0 !important;
-    }
-
-    .course.item .coursename {
-        color: #e0e0e0 !important;
-    }
-
-    .ui.segment {
-        background-color: #2d2d2d !important;
-        color: #e0e0e0 !important;
-    }
-}
-
-/* Login section styles */
-.ui.login.grid {
-    min-height: calc(100vh - 40px);
-    align-content: center;
-}
-
-.ui.login.grid .column {
-    max-width: 450px;
-}
-
-.ui.massive.center.aligned.header {
-    margin-bottom: 2em !important;
-}
-
-.ui.massive.center.aligned.header .image {
-    margin-bottom: 1em;
-}
-
-/* Settings page */
-.settings.section .ui.form {
-    max-width: none !important;
-}
-
-.settings.section .ui.grid {
-    margin: 0 !important;
-}
-
-.settings.section .field {
-    margin-bottom: 1.5em !important;
-}
-
-/* About page */
-.about.section .ui.relaxed.list .item {
-    padding: 0.8em 0 !important;
-}
-
-.about.section .ui.statistics .statistic {
-    margin: 0 0.5em !important;
-}
-
-/* Logger section */
-.logger.section #logContainer {
-    font-family: 'Courier New', Consolas, monospace !important;
-    font-size: 12px !important;
-    line-height: 1.4 !important;
-    background-color: #1e1e1e !important;
-    color: #d4d4d4 !important;
-    border-radius: 6px !important;
-    border: 1px solid #333 !important;
-}
-
-.logger.section .ui.statistics {
-    margin-bottom: 1em !important;
-}
-
-.logger.section .ui.secondary.menu {
-    margin-bottom: 1em !important;
-}
-
-/* Download queue */
-.download-queue .ui.list .item {
-    padding: 1em !important;
-    border: 1px solid #e1e1e1 !important;
-    border-radius: 6px !important;
-    margin-bottom: 0.5em !important;
-    background: white !important;
-    transition: all 0.3s ease;
-}
-
-.download-queue .ui.list .item:hover {
-    background: #f8f9fa !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-}
-
-/* Animations */
-.course.item .individual.progress,
-.course.item .combined.progress {
-    animation: fadeIn 0.5s ease-in;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Custom scrollbar for webkit browsers */
-.logger.section #logContainer::-webkit-scrollbar {
-    width: 12px;
-}
-
-.logger.section #logContainer::-webkit-scrollbar-track {
-    background: #2d2d2d;
-}
-
-.logger.section #logContainer::-webkit-scrollbar-thumb {
-    background: #666;
-    border-radius: 6px;
-}
-
-.logger.section #logContainer::-webkit-scrollbar-thumb:hover {
-    background: #888;
-}
-
-/* Print styles */
-@media print {
-    .ui.top.attached.menu,
-    .sidebar,
-    .ui.action.buttons {
-        display: none !important;
-    }
-
-    .course.item {
-        break-inside: avoid;
-        margin-bottom: 1em !important;
-        border: 1px solid #ddd !important;
-    }
-}
-
-/* Utility classes */
-.full-width {
-    width: 100% !important;
-}
-
-.text-center {
-    text-align: center !important;
-}
-
-.text-left {
-    text-align: left !important;
-}
-
-.text-right {
-    text-align: right !important;
-}
-
-.margin-top {
-    margin-top: 1rem !important;
-}
-
-.margin-bottom {
-    margin-bottom: 1rem !important;
-}
-
-.no-margin {
-    margin: 0 !important;
-}
-
-.no-padding {
-    padding: 0 !important;
-}
-
-/* Status indicators */
-.status-indicator {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 0.5em;
-}
-
-.status-indicator.online {
-    background-color: #21ba45;
-}
-
-.status-indicator.offline {
-    background-color: #db2828;
-}
-
-.status-indicator.connecting {
-    background-color: #f2711c;
-    animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-    0% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.5;
-    }
-    100% {
-        opacity: 1;
-    }
-}
-
-/* Course grid layout */
-.courses.items {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 1rem !important;
-}
-
-@media only screen and (min-width: 992px) {
-    .courses.items {
-        grid-template-columns: 1fr 1fr !important;
-    }
-}
-
-@media only screen and (min-width: 1200px) {
-    .courses.items {
-        grid-template-columns: 1fr 1fr 1fr !important;
-    }
-}
-
-/* Fix for Semantic UI overrides */
-.ui.items > .item {
-    margin-bottom: 0 !important;
-}
-
-.ui.items > .item > .image {
-    flex-shrink: 0 !important;
-}
-
-.ui.items > .item > .content {
-    padding-left: 1rem !important;
 }

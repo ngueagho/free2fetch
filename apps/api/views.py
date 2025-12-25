@@ -3,10 +3,14 @@ API Views for the Udemy Downloader application.
 """
 
 import asyncio
+import platform
+import sys
+from django.conf import settings
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -469,5 +473,33 @@ class SettingsViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response(
                 {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class SystemInfoView(APIView):
+    """System information endpoint."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        """Get system information."""
+        try:
+            return Response({
+                'python_version': sys.version,
+                'platform': platform.platform(),
+                'architecture': platform.architecture(),
+                'processor': platform.processor(),
+                'system': platform.system(),
+                'release': platform.release(),
+                'version': platform.version(),
+                'django_version': getattr(settings, 'DJANGO_VERSION', '4.2+'),
+                'app_version': getattr(settings, 'APP_VERSION', '1.0.0'),
+                'debug': settings.DEBUG,
+                'timezone': str(settings.TIME_ZONE),
+                'language': getattr(settings, 'LANGUAGE_CODE', 'en'),
+            })
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to get system info: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

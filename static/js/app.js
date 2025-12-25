@@ -163,66 +163,94 @@ function initializeAuthentication() {
             return;
         }
 
-        // Build login URL with subdomain parameter
-        let loginUrl = '/api/auth/udemy-login/';
+        // Store subdomain for later use
+        localStorage.setItem('udemy_subdomain', subdomain);
+
+        // Build Udemy login URL directly (like desktop version)
+        let udemyUrl;
         if (subdomain && subdomain !== 'www') {
-            loginUrl += `?subdomain=${encodeURIComponent(subdomain)}`;
+            udemyUrl = `https://${subdomain}.udemy.com/`;
+        } else {
+            udemyUrl = 'https://www.udemy.com/join/login-popup/';
         }
 
-        // Open popup for Udemy authentication
+        // Open popup to Udemy directly
         const popup = window.open(
-            loginUrl,
-            'udemy_auth',
-            'width=800,height=600,scrollbars=yes,resizable=yes'
+            udemyUrl,
+            'udemy_login',
+            'width=800,height=600,scrollbars=yes,resizable=yes,location=yes'
         );
 
         if (!popup) {
-            showAlert('Please allow popups for this site', 'warning');
+            showAlert('Please allow popups for this site', 'negative');
             return;
         }
 
-        // Check popup status
-        const checkClosed = setInterval(() => {
-            if (popup.closed) {
-                clearInterval(checkClosed);
-                // Check if authentication was successful
-                checkAuthStatus();
-            }
-        }, 1000);
+        showAlert('Please login to Udemy in the popup window', 'info');
 
-        // Listen for messages from popup
-        window.addEventListener('message', function(event) {
-            if (event.origin !== window.location.origin) return;
+        // Monitor popup for token extraction
+        let tokenFound = false;
+        const monitorInterval = setInterval(() => {
+            try {
+                // Try to access popup location (will fail due to CORS after redirect)
+                const popupLocation = popup.location;
 
-            if (event.data && event.data.type === 'udemy_auth_success') {
-                clearInterval(checkClosed);
-                popup.close();
-
-                // Store authentication data
-                if (event.data.tokens) {
-                    localStorage.setItem('access_token', event.data.tokens.access_token);
-                    localStorage.setItem('refresh_token', event.data.tokens.refresh_token);
-                    localStorage.setItem('user_data', JSON.stringify(event.data.user));
+                if (popup.closed) {
+                    clearInterval(monitorInterval);
+                    if (!tokenFound) {
+                        showAlert('Login cancelled or failed', 'warning');
+                    }
+                    return;
                 }
 
-                // Update UI
-                showDashboard();
-                showAlert('Login successful!', 'positive');
-            } else if (event.data && event.data.type === 'udemy_auth_error') {
-                clearInterval(checkClosed);
-                popup.close();
-                showAlert('Login failed: ' + event.data.error, 'negative');
-            }
-        });
+                // Check if we can access popup's localStorage or cookies
+                // This works only if popup is on same domain
+                if (popupLocation.hostname.includes(window.location.hostname)) {
+                    const token = extractTokenFromPopup(popup);
+                    if (token) {
+                        tokenFound = true;
+                        clearInterval(monitorInterval);
+                        popup.close();
+                        processUdemyToken(token, subdomain);
+                    }
+                }
 
-        // Fallback timeout
+            } catch (e) {
+                // CORS error means popup is on different domain (Udemy)
+                // We'll use the advanced token detection method
+                if (!tokenFound) {
+                    checkForTokenInBrowser(popup, subdomain);
+                }
+            }
+        }, 2000);
+
+        // Timeout after 5 minutes
         setTimeout(() => {
-            if (!popup.closed) {
-                clearInterval(checkClosed);
+            if (!popup.closed && !tokenFound) {
+                clearInterval(monitorInterval);
                 popup.close();
                 showAlert('Login timeout. Please try again.', 'warning');
             }
-        }, 300000); // 5 minutes
+        }, 300000);
+
+        // Alternative method: check browser storage periodically
+        const storageCheck = setInterval(() => {
+            if (popup.closed) {
+                clearInterval(storageCheck);
+                return;
+            }
+
+            // Check if token appeared in our storage (from extension or other means)
+            const token = localStorage.getItem('udemy_temp_token');
+            if (token) {
+                tokenFound = true;
+                clearInterval(monitorInterval);
+                clearInterval(storageCheck);
+                localStorage.removeItem('udemy_temp_token');
+                popup.close();
+                processUdemyToken(token, subdomain);
+            }
+        }, 1000);
     };
 
     window.loginWithAccessToken = function() {
@@ -513,6 +541,154 @@ function getAuthHeaders() {
 
     return headers;
 }
+
+// Token extraction utilities
+function extractTokenFromPopup(popup) {
+    try {
+        // Try to get token from popup's localStorage
+        const token = popup.localStorage.getItem('access_token');
+        if (token) return token;
+
+        // Try to get token from popup's cookies
+        const cookies = popup.document.cookie;
+        const tokenMatch = cookies.match(/access_token=([^;]+)/);
+        if (tokenMatch) return tokenMatch[1];
+
+        return null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function checkForTokenInBrowser(popup, subdomain) {
+    // Inject a script into the popup to extract token
+    try {
+        if (!popup.closed) {
+            // Try to inject detection script
+            const script = popup.document.createElement('script');
+            script.textContent = `
+                (function() {
+                    let token = null;
+
+                    // Check localStorage
+                    try {
+                        token = localStorage.getItem('access_token');
+                        if (token) {
+                            window.opener.postMessage({
+                                type: 'udemy_token_found',
+                                token: token,
+                                source: 'localStorage'
+                            }, '*');
+                            return;
+                        }
+                    } catch(e) {}
+
+                    // Check cookies
+                    try {
+                        const cookies = document.cookie;
+                        const match = cookies.match(/access_token=([^;]+)/);
+                        if (match) {
+                            token = match[1];
+                            window.opener.postMessage({
+                                type: 'udemy_token_found',
+                                token: token,
+                                source: 'cookie'
+                            }, '*');
+                            return;
+                        }
+                    } catch(e) {}
+
+                    // Monitor network requests
+                    const originalFetch = window.fetch;
+                    window.fetch = function(...args) {
+                        return originalFetch.apply(this, args).then(response => {
+                            try {
+                                const auth = args[1]?.headers?.Authorization;
+                                if (auth && auth.startsWith('Bearer ')) {
+                                    const token = auth.substring(7);
+                                    window.opener.postMessage({
+                                        type: 'udemy_token_found',
+                                        token: token,
+                                        source: 'fetch'
+                                    }, '*');
+                                }
+                            } catch(e) {}
+                            return response;
+                        });
+                    };
+
+                    // Monitor XHR requests
+                    const originalXHR = XMLHttpRequest.prototype.setRequestHeader;
+                    XMLHttpRequest.prototype.setRequestHeader = function(name, value) {
+                        if (name.toLowerCase() === 'authorization' && value.startsWith('Bearer ')) {
+                            const token = value.substring(7);
+                            window.opener.postMessage({
+                                type: 'udemy_token_found',
+                                token: token,
+                                source: 'xhr'
+                            }, '*');
+                        }
+                        return originalXHR.apply(this, arguments);
+                    };
+                })();
+            `;
+            popup.document.head.appendChild(script);
+        }
+    } catch (e) {
+        console.log('Cannot inject script into popup:', e.message);
+    }
+}
+
+function processUdemyToken(token, subdomain) {
+    if (!token || token.length < 10) {
+        showAlert('Invalid token received', 'negative');
+        return;
+    }
+
+    showAlert('Token found! Validating...', 'info');
+
+    // Send token to our backend for validation
+    fetch('/api/auth/token-login/', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+            access_token: token,
+            subdomain: subdomain || 'www'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Store authentication data
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('refresh_token', data.refresh_token);
+            localStorage.setItem('user_data', JSON.stringify(data.user));
+
+            // Update global user data
+            window.userData = data.user;
+            window.userData.isAuthenticated = true;
+
+            // Update UI
+            showDashboard();
+            showAlert('Login successful!', 'positive');
+        } else {
+            showAlert('Login failed: ' + (data.error || 'Unknown error'), 'negative');
+        }
+    })
+    .catch(error => {
+        console.error('Token validation error:', error);
+        showAlert('Login failed: Network error', 'negative');
+    });
+}
+
+// Listen for messages from popup
+window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'udemy_token_found') {
+        const subdomain = localStorage.getItem('udemy_subdomain') || 'www';
+        localStorage.removeItem('udemy_subdomain');
+        processUdemyToken(event.data.token, subdomain);
+    }
+});
 
 function refreshCsrfToken() {
     fetch('/api/auth/csrf-token/')

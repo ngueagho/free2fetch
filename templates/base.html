@@ -71,6 +71,11 @@
                                 {% trans "How to get Access Token?" %}
                             </a>
                         </div>
+
+                        <div class="ui info message">
+                            <div class="header">Méthode recommandée</div>
+                            <p>Cliquez sur "Login with Udemy" pour une connexion automatique sécurisée. Une popup s'ouvrira, connectez-vous normalement et l'application récupérera automatiquement votre token d'accès.</p>
+                        </div>
                     </div>
                 </div>
                 {% endblock %}
@@ -244,12 +249,6 @@
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 
-    <!-- WebSocket for real-time updates -->
-    <script src="{% static 'js/websocket-client.js' %}"></script>
-
-    <!-- Custom JavaScript -->
-    <script src="{% static 'js/app.js' %}"></script>
-
     <!-- Translation JavaScript -->
     <script>
         // Translation function for JavaScript
@@ -276,6 +275,12 @@
             settings: '/api/settings/'
         };
     </script>
+
+    <!-- WebSocket for real-time updates -->
+    <script src="{% static 'js/websocket-client.js' %}"></script>
+
+    <!-- Custom JavaScript -->
+    <script src="{% static 'js/app.js' %}"></script>
 
     {% block extra_js %}{% endblock %}
 </body>

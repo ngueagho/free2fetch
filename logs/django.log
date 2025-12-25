@@ -193,3 +193,34 @@ WARNING 2025-12-25 12:34:02,382 basehttp 76074 138406344521408 "GET /api/system/
 INFO 2025-12-25 12:37:54,327 autoreload 76074 138406529667200 /home/roberto/.local/lib/python3.12/site-packages/redis/crc.py changed, reloading.
 INFO 2025-12-25 12:38:00,299 autoreload 80311 135597988298880 Watching for file changes with StatReloader
 INFO 2025-12-25 12:38:08,753 autoreload 80311 135597988298880 /home/roberto/.local/lib/python3.12/site-packages/environ/compat.py changed, reloading.
+INFO 2025-12-25 12:46:10,445 autoreload 84079 126607717331072 Watching for file changes with StatReloader
+INFO 2025-12-25 12:50:03,941 basehttp 84079 126607536854720 "GET / HTTP/1.1" 200 55398
+WARNING 2025-12-25 12:50:04,569 basehttp 84079 126607536854720 "GET /static/images/icon.png HTTP/1.1" 404 1804
+WARNING 2025-12-25 12:50:04,770 log 84079 126607536854720 Not Found: /api/system/info/
+WARNING 2025-12-25 12:50:04,776 basehttp 84079 126607536854720 "GET /api/system/info/ HTTP/1.1" 404 7251
+INFO 2025-12-25 12:50:09,287 basehttp 84079 126607536854720 "GET /api/auth/udemy-login/ HTTP/1.1" 302 0
+INFO 2025-12-25 12:51:25,158 basehttp 84079 126607536854720 "GET / HTTP/1.1" 200 55398
+WARNING 2025-12-25 12:51:25,562 basehttp 84079 126607536854720 "GET /static/images/icon.png HTTP/1.1" 404 1804
+WARNING 2025-12-25 12:51:25,929 log 84079 126607536854720 Not Found: /api/system/info/
+WARNING 2025-12-25 12:51:25,930 basehttp 84079 126607536854720 "GET /api/system/info/ HTTP/1.1" 404 7251
+INFO 2025-12-25 13:21:26,736 basehttp 84079 126607536854720 "GET /api/auth/csrf-token/ HTTP/1.1" 200 81
+INFO 2025-12-25 13:29:13,960 basehttp 84079 126607536854720 "GET / HTTP/1.1" 200 55398
+INFO 2025-12-25 13:29:14,665 basehttp 84079 126607536854720 "GET /static/images/icon.png HTTP/1.1" 200 272
+WARNING 2025-12-25 13:29:14,955 log 84079 126607526364864 Not Found: /api/system/info/
+WARNING 2025-12-25 13:29:14,958 basehttp 84079 126607526364864 "GET /api/system/info/ HTTP/1.1" 404 7251
+INFO 2025-12-25 13:29:22,962 basehttp 84079 126607536854720 "GET /api/auth/udemy-login/ HTTP/1.1" 302 0
+INFO 2025-12-25 13:31:29,784 autoreload 84079 126607717331072 /home/roberto/.ZAP/udemy-downloader-gui/python_saas/apps/api/urls.py changed, reloading.
+INFO 2025-12-25 13:31:32,791 autoreload 105057 133156997886080 Watching for file changes with StatReloader
+INFO 2025-12-25 13:31:55,916 autoreload 105057 133156997886080 /home/roberto/.ZAP/udemy-downloader-gui/python_saas/apps/api/views.py changed, reloading.
+INFO 2025-12-25 13:31:58,638 autoreload 105282 135010262450304 Watching for file changes with StatReloader
+INFO 2025-12-25 13:33:05,271 autoreload 105282 135010262450304 /home/roberto/.ZAP/udemy-downloader-gui/python_saas/apps/api/views.py changed, reloading.
+INFO 2025-12-25 13:33:08,589 autoreload 105805 137135017398400 Watching for file changes with StatReloader
+INFO 2025-12-25 13:51:46,314 autoreload 114445 134618626506880 Watching for file changes with StatReloader
+INFO 2025-12-25 13:51:54,342 basehttp 114445 134618513839808 "GET / HTTP/1.1" 200 55786
+INFO 2025-12-25 13:51:54,809 basehttp 114445 134618513839808 "GET /static/css/app.css HTTP/1.1" 200 2447
+INFO 2025-12-25 13:51:54,836 basehttp 114445 134618513839808 "GET /static/js/websocket-client.js HTTP/1.1" 200 8513
+INFO 2025-12-25 13:51:54,879 basehttp 114445 134618435024576 "GET /static/js/app.js HTTP/1.1" 200 29721
+INFO 2025-12-25 13:51:57,529 basehttp 114445 134618435024576 "GET /static/images/icon.png HTTP/1.1" 200 272
+INFO 2025-12-25 13:51:59,799 basehttp 114445 134618435024576 "GET /static/images/icon.png HTTP/1.1" 200 272
+INFO 2025-12-25 13:51:59,947 basehttp 114445 134618435024576 "GET /api/system/info/ HTTP/1.1" 200 397
+INFO 2025-12-25 13:52:03,091 basehttp 114445 134618435024576 "GET /static/images/icon.png HTTP/1.1" 200 272
