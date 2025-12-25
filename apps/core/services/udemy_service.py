@@ -198,23 +198,273 @@ class UdemyService:
 
         if is_subscriber:
             # Fetch both regular and enrolled courses in parallel
-            courses_task = self._fetch_endpoint(courses_endpoint)
-            enrolled_task = self._fetch_endpoint(enrolled_endpoint)
-
-            courses_data, enrolled_data = await asyncio.gather(courses_task, enrolled_task)
+            tasks = [
+                self._fetch_endpoint(courses_endpoint),
+                self._fetch_endpoint(enrolled_endpoint)
+            ]
+            results = await asyncio.gather(*tasks)
 
             # Combine results
-            next_urls = [url for url in [courses_data.get('next'), enrolled_data.get('next')] if url]
-            previous_urls = [url for url in [courses_data.get('previous'), enrolled_data.get('previous')] if url]
+            courses_data = results[0]
+            enrolled_data = results[1]
+
+            # Merge course lists
+            all_courses = courses_data.get('results', [])
+            all_courses.extend(enrolled_data.get('results', []))
+
+            # Remove duplicates based on course ID
+            seen_ids = set()
+            unique_courses = []
+            for course in all_courses:
+                course_id = course.get('id')
+                if course_id not in seen_ids:
+                    seen_ids.add(course_id)
+                    unique_courses.append(course)
 
             return {
-                'count': courses_data.get('count', 0) + enrolled_data.get('count', 0),
-                'next': next_urls if next_urls else None,
-                'previous': previous_urls if previous_urls else None,
-                'results': courses_data.get('results', []) + enrolled_data.get('results', [])
+                'results': unique_courses,
+                'count': len(unique_courses)
             }
         else:
             return await self._fetch_endpoint(courses_endpoint)
+
+    async def fetch_course_curriculum(self, course_id: int, fields: str = None) -> Dict[str, Any]:
+        """
+        Fetch course curriculum structure.
+
+        Args:
+            course_id: Udemy course ID
+            fields: Additional fields to fetch
+
+        Returns:
+            Course curriculum data
+        """
+        endpoint = f"/courses/{course_id}/cached-subscriber-curriculum-items"
+
+        if fields:
+            endpoint += f"?{fields}"
+
+        return await self._fetch_endpoint(endpoint)
+
+    async def fetch_course_full_curriculum(self, course_id: int) -> Dict[str, Any]:
+        """
+        Fetch complete course curriculum with assets.
+        Replicates the buildCurriculumWithAssets functionality.
+
+        Args:
+            course_id: Udemy course ID
+
+        Returns:
+            Complete curriculum with asset data
+        """
+        # Fetch curriculum with asset fields
+        fields = "fields[lecture]=asset,description,download_url,is_published,last_watched_second" + self.assets_fields
+        fields += "&fields[chapter]=@min,description"
+        fields += "&fields[quiz]=@min,description"
+        fields += "&fields[practice]=@min,description"
+
+        curriculum_data = await self.fetch_course_curriculum(course_id, fields)
+
+        # Process curriculum items to prepare stream sources
+        items = curriculum_data.get('results', [])
+        if items:
+            await self._prepare_streams_source(course_id, items)
+
+        return curriculum_data
+
+    async def fetch_lecture(self, course_id: int, lecture_id: int, include_assets: bool = True, include_captions: bool = True) -> Dict[str, Any]:
+        """
+        Fetch detailed lecture information.
+
+        Args:
+            course_id: Udemy course ID
+            lecture_id: Lecture ID
+            include_assets: Whether to include supplementary assets
+            include_captions: Whether to include captions
+
+        Returns:
+            Lecture data with assets
+        """
+        endpoint = f"/courses/{course_id}/lectures/{lecture_id}"
+
+        fields = ["asset", "description", "download_url", "is_published", "last_watched_second"]
+
+        if include_assets:
+            fields.append("supplementary_assets")
+
+        if include_captions:
+            fields.append("captions")
+
+        fields_str = f"fields[lecture]={','.join(fields)}{self.assets_fields}"
+        endpoint += f"?{fields_str}"
+
+        return await self._fetch_endpoint(endpoint)
+
+    async def _prepare_stream_source(self, course_id: int, item: Dict[str, Any]) -> None:
+        """
+        Prepare stream sources for a lecture item.
+        Converts Udemy stream URLs to standardized format.
+
+        Args:
+            course_id: Course ID
+            item: Curriculum item to process
+        """
+        try:
+            if item.get('_class') == 'lecture' and 'asset' in item:
+                asset = item['asset']
+                asset_type = asset.get('asset_type', '').lower()
+
+                if asset_type in ['video', 'videomashup']:
+                    stream_urls = asset.get('stream_urls', {}).get('Video') or asset.get('media_sources')
+                    is_encrypted = bool(asset.get('media_license_token'))
+
+                    if stream_urls:
+                        streams = await self._convert_to_streams(stream_urls, is_encrypted, asset.get('title', ''))
+
+                        # Clean up and set streams
+                        if 'stream_urls' in asset:
+                            del asset['stream_urls']
+                        if 'media_sources' in asset:
+                            del asset['media_sources']
+                        asset['streams'] = streams
+
+                elif asset_type == 'presentation':
+                    # Fetch full lecture data for presentations
+                    lecture_data = await self.fetch_lecture(course_id, item['id'], True, True)
+                    item['asset'] = lecture_data.get('asset', {})
+                    item['supplementary_assets'] = lecture_data.get('supplementary_assets', [])
+
+        except Exception as e:
+            logger.error(f"Error preparing stream source for item {item.get('id')}: {e}")
+            raise UdemyServiceError(f"Failed to prepare stream source: {e}")
+
+    async def _prepare_streams_source(self, course_id: int, items: List[Dict[str, Any]]) -> None:
+        """
+        Prepare stream sources for multiple curriculum items.
+
+        Args:
+            course_id: Course ID
+            items: List of curriculum items
+        """
+        try:
+            tasks = [self._prepare_stream_source(course_id, item) for item in items]
+            await asyncio.gather(*tasks, return_exceptions=True)
+        except Exception as e:
+            logger.error(f"Error preparing stream sources: {e}")
+            raise UdemyServiceError(f"Failed to prepare stream sources: {e}")
+
+    async def _convert_to_streams(self, stream_urls: List[Dict[str, Any]], is_encrypted: bool, title: str = "") -> Dict[str, Any]:
+        """
+        Convert Udemy stream URLs to standardized format.
+
+        Args:
+            stream_urls: List of stream URL objects
+            is_encrypted: Whether content is encrypted
+            title: Content title for logging
+
+        Returns:
+            Standardized streams object
+        """
+        if not stream_urls:
+            raise UdemyServiceError("No streams found to convert")
+
+        sources = {}
+        qualities = []
+
+        for stream in stream_urls:
+            # Handle different stream formats
+            if isinstance(stream, dict):
+                # Extract quality and URL
+                quality = stream.get('height') or stream.get('quality') or stream.get('label')
+                url = stream.get('src') or stream.get('file') or stream.get('url')
+
+                if quality and url:
+                    quality_key = str(quality)
+                    qualities.append(int(quality) if str(quality).isdigit() else 0)
+
+                    # Determine stream type
+                    stream_type = 'hls' if '.m3u8' in url else 'progressive'
+
+                    sources[quality_key] = {
+                        'type': stream_type,
+                        'url': url,
+                        'quality': quality,
+                        'is_encrypted': is_encrypted
+                    }
+
+        # Calculate quality range
+        valid_qualities = [q for q in qualities if q > 0]
+        min_quality = min(valid_qualities) if valid_qualities else None
+        max_quality = max(valid_qualities) if valid_qualities else None
+
+        return {
+            'sources': sources,
+            'min_quality': str(min_quality) if min_quality else None,
+            'max_quality': str(max_quality) if max_quality else None,
+            'is_encrypted': is_encrypted,
+            'available_qualities': sorted(valid_qualities, reverse=True)
+        }
+
+    async def validate_access_token(self, access_token: str) -> Tuple[bool, Optional[Dict[str, Any]]]:
+        """
+        Validate access token by fetching user profile.
+
+        Args:
+            access_token: Token to validate
+
+        Returns:
+            Tuple of (is_valid, user_data)
+        """
+        try:
+            user_data = await self.fetch_profile(access_token)
+            return True, user_data
+        except UdemyServiceError:
+            return False, None
+
+    def clear_cache(self) -> None:
+        """
+        Clear all cached data for this service.
+        """
+        # This would need to be implemented based on cache backend
+        # For now, just log
+        logger.info("Clearing Udemy service cache")
+
+    async def export_course_m3u(self, course_id: int) -> str:
+        """
+        Export course as M3U playlist.
+
+        Args:
+            course_id: Course ID to export
+
+        Returns:
+            M3U playlist content
+        """
+        curriculum = await self.fetch_course_full_curriculum(course_id)
+
+        m3u_content = ["#EXTM3U"]
+
+        for item in curriculum.get('results', []):
+            if item.get('_class') == 'lecture' and 'asset' in item:
+                asset = item['asset']
+                if asset.get('asset_type') == 'Video' and 'streams' in asset:
+                    title = item.get('title', 'Unknown')
+                    streams = asset['streams']
+
+                    # Get best quality stream
+                    best_quality = None
+                    best_url = None
+
+                    for quality, stream_data in streams.get('sources', {}).items():
+                        if not stream_data.get('is_encrypted'):
+                            if best_quality is None or int(quality) > int(best_quality):
+                                best_quality = quality
+                                best_url = stream_data['url']
+
+                    if best_url:
+                        m3u_content.append(f"#EXTINF:-1,{title}")
+                        m3u_content.append(best_url)
+
+        return '\n'.join(m3u_content)
 
     async def fetch_search_courses(self, keyword: str, page_size: int = 25, is_subscriber: bool = False) -> Dict[str, Any]:
         """

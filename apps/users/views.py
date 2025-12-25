@@ -29,25 +29,20 @@ class UdemyLoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        """Redirect to Udemy OAuth."""
-        # Build OAuth URL
+        """Redirect to Udemy login page."""
         subdomain = request.GET.get('subdomain', 'www')
-        base_url = f"https://{subdomain}.udemy.com/join/login-popup/"
 
-        oauth_params = {
-            'client_id': 'udemy_oauth_client',
-            'response_type': 'token',
-            'redirect_uri': request.build_absolute_uri('/api/auth/udemy-callback/'),
-            'scope': 'read write'
-        }
+        # Store subdomain in session for callback
+        request.session['udemy_subdomain'] = subdomain
 
-        from urllib.parse import urlencode
-        oauth_url = f"{base_url}?{urlencode(oauth_params)}"
+        # Build Udemy login URL
+        if subdomain and subdomain != 'www':
+            login_url = f"https://{subdomain}.udemy.com/"
+        else:
+            login_url = "https://www.udemy.com/join/login-popup/"
 
-        return Response({
-            'oauth_url': oauth_url,
-            'message': 'Redirect to this URL for Udemy authentication'
-        })
+        from django.shortcuts import redirect
+        return redirect(login_url)
 
     def post(self, request):
         """Handle OAuth callback with token."""
@@ -464,3 +459,76 @@ class UserPreferencesViewSet(viewsets.ModelViewSet):
             'success': True,
             'message': 'Preferences updated successfully'
         })
+
+
+class UdemyCallbackView(APIView):
+    """Handle Udemy OAuth callback."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        """Display callback page for token extraction."""
+        from django.shortcuts import render
+        return render(request, 'udemy_callback.html')
+
+    def post(self, request):
+        """Process extracted token from JavaScript."""
+        access_token = request.data.get('access_token')
+        subdomain = request.session.get('udemy_subdomain', 'www')
+
+        if not access_token:
+            return Response({
+                'success': False,
+                'error': 'No access token provided'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Validate token with Udemy API
+            udemy_service = UdemyService(subdomain=subdomain)
+            user_data = asyncio.run(udemy_service.fetch_profile(access_token))
+
+            if not user_data or not user_data.get('header', {}).get('isLoggedIn'):
+                return Response({
+                    'success': False,
+                    'error': 'Invalid access token'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Create or get user
+            udemy_user_data = user_data['header']['user']
+            email = udemy_user_data.get('email', f"user_{udemy_user_data.get('id')}@udemy.local")
+
+            user, created = User.objects.get_or_create(
+                username=email,
+                defaults={
+                    'email': email,
+                    'first_name': udemy_user_data.get('display_name', '').split(' ')[0] if udemy_user_data.get('display_name') else '',
+                    'last_name': ' '.join(udemy_user_data.get('display_name', '').split(' ')[1:]) if udemy_user_data.get('display_name') else '',
+                }
+            )
+
+            # Store Udemy access token
+            user.udemy_access_token = access_token
+            user.udemy_subdomain = subdomain
+            user.save()
+
+            # Create Django auth tokens
+            refresh = RefreshToken.for_user(user)
+
+            return Response({
+                'success': True,
+                'access_token': str(refresh.access_token),
+                'refresh_token': str(refresh),
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                }
+            })
+
+        except Exception as e:
+            logger.error(f"Error in Udemy callback: {str(e)}")
+            return Response({
+                'success': False,
+                'error': 'Authentication failed'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

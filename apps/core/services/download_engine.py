@@ -148,6 +148,428 @@ class DownloadEngine:
         """Get download task by ID."""
         return self.downloads.get(download_id)
 
+    def pause_download(self, download_id: str) -> bool:
+        """
+        Pause a download.
+
+        Args:
+            download_id: Download ID to pause
+
+        Returns:
+            True if successfully paused
+        """
+        with self._lock:
+            task = self.downloads.get(download_id)
+            if task and task.status == DownloadStatus.DOWNLOADING:
+                task.pause()
+                return True
+            return False
+
+    def resume_download_by_id(self, download_id: str) -> bool:
+        """
+        Resume a paused download by ID.
+
+        Args:
+            download_id: Download ID to resume
+
+        Returns:
+            True if successfully resumed
+        """
+        with self._lock:
+            task = self.downloads.get(download_id)
+            if task and task.status == DownloadStatus.PAUSED:
+                task.resume()
+                return True
+            return False
+
+    def cancel_download(self, download_id: str) -> bool:
+        """
+        Cancel a download.
+
+        Args:
+            download_id: Download ID to cancel
+
+        Returns:
+            True if successfully cancelled
+        """
+        with self._lock:
+            task = self.downloads.get(download_id)
+            if task and task.status in [DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED, DownloadStatus.PREPARING]:
+                task.cancel()
+                return True
+            return False
+
+    def get_active_downloads(self) -> List['DownloadTask']:
+        """
+        Get list of active downloads.
+
+        Returns:
+            List of active download tasks
+        """
+        with self._lock:
+            return [
+                task for task in self.downloads.values()
+                if task.status in [DownloadStatus.DOWNLOADING, DownloadStatus.PREPARING]
+            ]
+
+    def cleanup_completed(self) -> int:
+        """
+        Remove completed downloads from memory.
+
+        Returns:
+            Number of downloads cleaned up
+        """
+        with self._lock:
+            completed_ids = [
+                download_id for download_id, task in self.downloads.items()
+                if task.status in [DownloadStatus.COMPLETED, DownloadStatus.CANCELLED, DownloadStatus.FAILED]
+            ]
+
+            for download_id in completed_ids:
+                del self.downloads[download_id]
+
+            return len(completed_ids)
+
+
+class DownloadTask:
+    """
+    Individual download task with progress tracking and control.
+    """
+
+    def __init__(self, download_id: str, url: str, file_path: str, config: DownloadConfig, progress_callback: Optional[Callable] = None):
+        """
+        Initialize download task.
+
+        Args:
+            download_id: Unique download identifier
+            url: URL to download
+            file_path: Path to save file
+            config: Download configuration
+            progress_callback: Progress callback function
+        """
+        self.download_id = download_id
+        self.url = url
+        self.file_path = file_path
+        self.config = config
+        self.progress_callback = progress_callback
+
+        self.status = DownloadStatus.PENDING
+        self.progress = DownloadProgress()
+        self.error_message = ""
+        self.retry_count = 0
+
+        self._cancel_event = threading.Event()
+        self._pause_event = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+
+    def start(self) -> None:
+        """
+        Start the download.
+        """
+        if self.status == DownloadStatus.PENDING:
+            self.status = DownloadStatus.PREPARING
+            self._thread = threading.Thread(target=self._download_worker, daemon=True)
+            self._thread.start()
+
+    def pause(self) -> None:
+        """
+        Pause the download.
+        """
+        if self.status == DownloadStatus.DOWNLOADING:
+            self._pause_event.set()
+            self.status = DownloadStatus.PAUSED
+
+    def resume(self) -> None:
+        """
+        Resume the download.
+        """
+        if self.status == DownloadStatus.PAUSED:
+            self._pause_event.clear()
+            self.status = DownloadStatus.DOWNLOADING
+            if self._thread and not self._thread.is_alive():
+                self._thread = threading.Thread(target=self._download_worker, daemon=True)
+                self._thread.start()
+
+    def cancel(self) -> None:
+        """
+        Cancel the download.
+        """
+        self._cancel_event.set()
+        self.status = DownloadStatus.CANCELLED
+
+    def _download_worker(self) -> None:
+        """
+        Main download worker thread.
+        """
+        try:
+            # Prepare download directory
+            os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
+
+            # Check if file already exists and get size
+            downloaded_size = 0
+            if os.path.exists(self.file_path):
+                downloaded_size = os.path.getsize(self.file_path)
+                self.progress.downloaded_size = downloaded_size
+
+            # Get file info from server
+            headers = {'User-Agent': 'Mozilla/5.0 (compatible; UdemyDownloader/1.0)'}
+            if downloaded_size > 0:
+                headers['Range'] = f'bytes={downloaded_size}-'
+
+            # Start download
+            self.status = DownloadStatus.DOWNLOADING
+            self._download_with_requests(headers, downloaded_size)
+
+        except Exception as e:
+            logger.error(f"Download failed for {self.url}: {e}")
+            self.error_message = str(e)
+            if self.retry_count < self.config.max_retries:
+                self.retry_count += 1
+                logger.info(f"Retrying download ({self.retry_count}/{self.config.max_retries})...")
+                time.sleep(self.config.retry_interval)
+                self._download_worker()
+            else:
+                self.status = DownloadStatus.FAILED
+
+    def _download_with_requests(self, headers: Dict[str, str], resume_size: int) -> None:
+        """
+        Download file using requests with progress tracking.
+
+        Args:
+            headers: HTTP headers
+            resume_size: Size to resume from
+        """
+        import requests
+
+        try:
+            with requests.get(self.url, headers=headers, stream=True, timeout=self.config.timeout) as response:
+                response.raise_for_status()
+
+                # Get total file size
+                content_length = response.headers.get('content-length')
+                if content_length:
+                    self.progress.total_size = resume_size + int(content_length)
+                else:
+                    self.progress.total_size = 0
+
+                # Save metadata for resumable downloads
+                self._save_metadata()
+
+                # Open file in append mode if resuming
+                mode = 'ab' if resume_size > 0 else 'wb'
+                with open(self.file_path, mode) as file:
+                    start_time = time.time()
+                    last_update = start_time
+
+                    for chunk in response.iter_content(chunk_size=self.config.chunk_size):
+                        # Check for cancellation
+                        if self._cancel_event.is_set():
+                            return
+
+                        # Check for pause
+                        while self._pause_event.is_set():
+                            time.sleep(0.1)
+                            if self._cancel_event.is_set():
+                                return
+
+                        if chunk:
+                            file.write(chunk)
+                            self.progress.downloaded_size += len(chunk)
+
+                            # Update progress periodically
+                            current_time = time.time()
+                            if current_time - last_update >= 0.5:  # Update every 500ms
+                                self._update_progress(current_time - start_time)
+                                last_update = current_time
+
+                # Final progress update
+                self._update_progress(time.time() - start_time)
+
+                # Mark as completed
+                if not self._cancel_event.is_set():
+                    self.status = DownloadStatus.COMPLETED
+                    self.progress.percentage = 100.0
+                    self._cleanup_metadata()
+                    if self.progress_callback:
+                        self.progress_callback(self)
+
+        except requests.RequestException as e:
+            logger.error(f"HTTP error downloading {self.url}: {e}")
+            raise
+
+    def _update_progress(self, elapsed_time: float) -> None:
+        """
+        Update download progress and call callback.
+
+        Args:
+            elapsed_time: Time elapsed since start
+        """
+        if self.progress.total_size > 0:
+            self.progress.percentage = (self.progress.downloaded_size / self.progress.total_size) * 100
+
+        # Calculate speed
+        if elapsed_time > 0:
+            self.progress.speed = self.progress.downloaded_size / elapsed_time
+
+            # Calculate ETA
+            if self.progress.speed > 0 and self.progress.total_size > 0:
+                remaining_bytes = self.progress.total_size - self.progress.downloaded_size
+                self.progress.estimated_time_remaining = remaining_bytes / self.progress.speed
+
+        # Call progress callback
+        if self.progress_callback:
+            self.progress_callback(self)
+
+    def _save_metadata(self) -> None:
+        """
+        Save download metadata for resume capability.
+        """
+        metadata = {
+            'url': self.url,
+            'total_size': self.progress.total_size,
+            'downloaded_size': self.progress.downloaded_size,
+            'timestamp': time.time()
+        }
+
+        metadata_path = f"{self.file_path}.mtd"
+        try:
+            with open(metadata_path, 'w') as f:
+                import json
+                json.dump(metadata, f)
+        except Exception as e:
+            logger.warning(f"Failed to save metadata: {e}")
+
+    def _cleanup_metadata(self) -> None:
+        """
+        Remove metadata file after successful completion.
+        """
+        metadata_path = f"{self.file_path}.mtd"
+        try:
+            if os.path.exists(metadata_path):
+                os.remove(metadata_path)
+        except Exception as e:
+            logger.warning(f"Failed to cleanup metadata: {e}")
+
+    def get_formatted_speed(self) -> str:
+        """
+        Get formatted download speed string.
+
+        Returns:
+            Formatted speed (e.g., "2.5 MB/s")
+        """
+        speed = self.progress.speed
+        if speed < 1024:
+            return f"{speed:.1f} B/s"
+        elif speed < 1024 * 1024:
+            return f"{speed / 1024:.1f} KB/s"
+        elif speed < 1024 * 1024 * 1024:
+            return f"{speed / (1024 * 1024):.1f} MB/s"
+        else:
+            return f"{speed / (1024 * 1024 * 1024):.1f} GB/s"
+
+    def get_formatted_eta(self) -> str:
+        """
+        Get formatted estimated time remaining.
+
+        Returns:
+            Formatted ETA (e.g., "05:30")
+        """
+        eta = self.progress.estimated_time_remaining
+        if eta <= 0:
+            return "--:--"
+
+        hours = int(eta // 3600)
+        minutes = int((eta % 3600) // 60)
+        seconds = int(eta % 60)
+
+        if hours > 0:
+            return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        else:
+            return f"{minutes:02d}:{seconds:02d}"
+
+
+class M3U8Downloader:
+    """
+    Specialized downloader for M3U8 playlists.
+    """
+
+    def __init__(self, config: Optional[DownloadConfig] = None):
+        """Initialize M3U8 downloader."""
+        self.config = config or DownloadConfig()
+        self.download_engine = DownloadEngine(config)
+
+    async def download_m3u8(self, m3u8_url: str, output_path: str, progress_callback: Optional[Callable] = None) -> bool:
+        """
+        Download M3U8 playlist and combine segments.
+
+        Args:
+            m3u8_url: M3U8 playlist URL
+            output_path: Output file path
+            progress_callback: Progress callback
+
+        Returns:
+            True if successful
+        """
+        try:
+            from .m3u8_service import M3U8Service
+
+            # Parse M3U8 playlist
+            m3u8_service = M3U8Service(m3u8_url)
+            segments = await m3u8_service.get_segments()
+
+            if not segments:
+                raise Exception("No segments found in M3U8 playlist")
+
+            # Download all segments
+            temp_dir = f"{output_path}.tmp"
+            os.makedirs(temp_dir, exist_ok=True)
+
+            segment_files = []
+            for i, segment_url in enumerate(segments):
+                segment_path = os.path.join(temp_dir, f"segment_{i:04d}.ts")
+                task = self.download_engine.download(segment_url, segment_path)
+                task.start()
+                segment_files.append(segment_path)
+
+                # Wait for completion
+                while task.status not in [DownloadStatus.COMPLETED, DownloadStatus.FAILED, DownloadStatus.CANCELLED]:
+                    await asyncio.sleep(0.1)
+
+                if task.status != DownloadStatus.COMPLETED:
+                    raise Exception(f"Failed to download segment {i}: {task.error_message}")
+
+                # Update progress
+                if progress_callback:
+                    overall_progress = (i + 1) / len(segments) * 100
+                    progress_callback({'percentage': overall_progress, 'segment': i + 1, 'total_segments': len(segments)})
+
+            # Combine segments
+            await self._combine_segments(segment_files, output_path)
+
+            # Cleanup temp directory
+            import shutil
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to download M3U8 {m3u8_url}: {e}")
+            return False
+
+    async def _combine_segments(self, segment_files: List[str], output_path: str) -> None:
+        """
+        Combine downloaded segments into single file.
+
+        Args:
+            segment_files: List of segment file paths
+            output_path: Output file path
+        """
+        with open(output_path, 'wb') as output_file:
+            for segment_file in segment_files:
+                if os.path.exists(segment_file):
+                    with open(segment_file, 'rb') as f:
+                        output_file.write(f.read())
+
     def cancel_all_downloads(self):
         """Cancel all active downloads."""
         with self._lock:

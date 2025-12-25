@@ -32,11 +32,10 @@ function initializeApp() {
     // Initialize HTMX
     initializeHTMX();
 
-    // Check if user is authenticated
-    if (window.userData && window.userData.isAuthenticated) {
-        initializeAuthenticatedFeatures();
-    } else {
-        showLoginSection();
+    // Check authentication status
+    if (!checkAuthStatus()) {
+        // Will show login section if not authenticated
+        // checkAuthStatus() handles the UI state
     }
 }
 
@@ -155,8 +154,75 @@ function initializeAuthentication() {
 
     // Global authentication functions
     window.loginWithUdemy = function() {
-        // Redirect to OAuth login
-        window.location.href = '/api/auth/udemy-login/';
+        // Check for business account
+        const isBusinessAccount = $('#business').is(':checked');
+        const subdomain = isBusinessAccount ? $('#subdomain').val() : 'www';
+
+        if (isBusinessAccount && !subdomain) {
+            showAlert('Please enter business subdomain', 'negative');
+            return;
+        }
+
+        // Build login URL with subdomain parameter
+        let loginUrl = '/api/auth/udemy-login/';
+        if (subdomain && subdomain !== 'www') {
+            loginUrl += `?subdomain=${encodeURIComponent(subdomain)}`;
+        }
+
+        // Open popup for Udemy authentication
+        const popup = window.open(
+            loginUrl,
+            'udemy_auth',
+            'width=800,height=600,scrollbars=yes,resizable=yes'
+        );
+
+        if (!popup) {
+            showAlert('Please allow popups for this site', 'warning');
+            return;
+        }
+
+        // Check popup status
+        const checkClosed = setInterval(() => {
+            if (popup.closed) {
+                clearInterval(checkClosed);
+                // Check if authentication was successful
+                checkAuthStatus();
+            }
+        }, 1000);
+
+        // Listen for messages from popup
+        window.addEventListener('message', function(event) {
+            if (event.origin !== window.location.origin) return;
+
+            if (event.data && event.data.type === 'udemy_auth_success') {
+                clearInterval(checkClosed);
+                popup.close();
+
+                // Store authentication data
+                if (event.data.tokens) {
+                    localStorage.setItem('access_token', event.data.tokens.access_token);
+                    localStorage.setItem('refresh_token', event.data.tokens.refresh_token);
+                    localStorage.setItem('user_data', JSON.stringify(event.data.user));
+                }
+
+                // Update UI
+                showDashboard();
+                showAlert('Login successful!', 'positive');
+            } else if (event.data && event.data.type === 'udemy_auth_error') {
+                clearInterval(checkClosed);
+                popup.close();
+                showAlert('Login failed: ' + event.data.error, 'negative');
+            }
+        });
+
+        // Fallback timeout
+        setTimeout(() => {
+            if (!popup.closed) {
+                clearInterval(checkClosed);
+                popup.close();
+                showAlert('Login timeout. Please try again.', 'warning');
+            }
+        }, 300000); // 5 minutes
     };
 
     window.loginWithAccessToken = function() {
@@ -172,9 +238,43 @@ function initializeAuthentication() {
                 }
             })
             .then(() => {
+                // Clear local storage
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                localStorage.removeItem('user_data');
                 window.location.reload();
             });
         }
+    };
+
+    // Check authentication status
+    window.checkAuthStatus = function() {
+        const accessToken = localStorage.getItem('access_token');
+        const userData = localStorage.getItem('user_data');
+
+        if (accessToken && userData) {
+            try {
+                window.userData = JSON.parse(userData);
+                window.userData.isAuthenticated = true;
+                showDashboard();
+                initializeAuthenticatedFeatures();
+                return true;
+            } catch (e) {
+                console.error('Error parsing user data:', e);
+                localStorage.clear();
+            }
+        }
+
+        // Check if user is authenticated on server side
+        const serverAuthenticated = window.userData && window.userData.isAuthenticated;
+        if (serverAuthenticated) {
+            showDashboard();
+            initializeAuthenticatedFeatures();
+            return true;
+        }
+
+        showLoginSection();
+        return false;
     };
 }
 
@@ -359,14 +459,22 @@ function loadCoursesContent() {
     // Load courses via HTMX if container is empty
     const $container = $('#coursesContainer');
     if ($container.children().length === 0) {
-        htmx.ajax('GET', '/api/courses/', {target: '#coursesContainer'});
+        const headers = getAuthHeaders();
+        htmx.ajax('GET', '/api/courses/', {
+            target: '#coursesContainer',
+            headers: headers
+        });
     }
 }
 
 function loadDownloadsContent() {
     // Load downloads via HTMX
     const $container = $('#downloadsContainer');
-    htmx.ajax('GET', '/api/downloads/', {target: '#downloadsContainer'});
+    const headers = getAuthHeaders();
+    htmx.ajax('GET', '/api/downloads/', {
+        target: '#downloadsContainer',
+        headers: headers
+    });
 }
 
 function loadSettingsContent() {
@@ -390,6 +498,20 @@ function getCsrfToken() {
     return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
            document.querySelector('meta[name=csrf-token]')?.content ||
            $('input[name="csrfmiddlewaretoken"]').val();
+}
+
+function getAuthHeaders() {
+    const headers = {
+        'X-CSRFToken': getCsrfToken(),
+        'Content-Type': 'application/json'
+    };
+
+    const accessToken = localStorage.getItem('access_token');
+    if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    return headers;
 }
 
 function refreshCsrfToken() {

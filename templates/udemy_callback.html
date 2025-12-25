@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Udemy Authentication</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <h2>Completing Udemy Authentication...</h2>
+        <p>Please wait while we process your login.</p>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        // Extract access token from various sources
+        function getAccessToken() {
+            // Check URL fragment (OAuth token response)
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            let token = hashParams.get('access_token');
+
+            if (token) return token;
+
+            // Check cookies
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'access_token') {
+                    return decodeURIComponent(value);
+                }
+            }
+
+            // Check localStorage (if Udemy stores it there)
+            token = localStorage.getItem('access_token');
+            if (token) return token;
+
+            // Check sessionStorage
+            token = sessionStorage.getItem('access_token');
+            if (token) return token;
+
+            return null;
+        }
+
+        // Function to extract token from network requests (fallback)
+        function interceptNetworkRequests() {
+            // Override XMLHttpRequest to capture Authorization headers
+            const originalOpen = XMLHttpRequest.prototype.open;
+            const originalSend = XMLHttpRequest.prototype.send;
+
+            XMLHttpRequest.prototype.open = function(method, url, ...args) {
+                this._url = url;
+                return originalOpen.apply(this, [method, url, ...args]);
+            };
+
+            XMLHttpRequest.prototype.send = function(...args) {
+                // Listen for request headers
+                const originalSetRequestHeader = this.setRequestHeader;
+                this.setRequestHeader = function(name, value) {
+                    if (name.toLowerCase() === 'authorization' && value.startsWith('Bearer ')) {
+                        const token = value.substring(7);
+                        if (token && this._url.includes('udemy.com')) {
+                            processToken(token);
+                        }
+                    }
+                    return originalSetRequestHeader.apply(this, [name, value]);
+                };
+
+                return originalSend.apply(this, args);
+            };
+
+            // Also override fetch
+            const originalFetch = window.fetch;
+            window.fetch = function(url, options = {}) {
+                if (options.headers) {
+                    const auth = options.headers['Authorization'] || options.headers['authorization'];
+                    if (auth && auth.startsWith('Bearer ') && url.includes('udemy.com')) {
+                        const token = auth.substring(7);
+                        processToken(token);
+                    }
+                }
+                return originalFetch.apply(this, arguments);
+            };
+        }
+
+        // Send token to our backend
+        function processToken(token) {
+            if (!token || token.length < 10) return;
+
+            fetch('/api/auth/udemy-callback/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    access_token: token
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Store tokens locally
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('refresh_token', data.refresh_token);
+                    localStorage.setItem('user_data', JSON.stringify(data.user));
+
+                    // Notify parent window if this is a popup
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            type: 'udemy_auth_success',
+                            tokens: {
+                                access_token: data.access_token,
+                                refresh_token: data.refresh_token
+                            },
+                            user: data.user
+                        }, window.location.origin);
+                        window.close();
+                    } else {
+                        // Redirect back to main app
+                        window.location.href = '/';
+                    }
+                } else {
+                    const errorMsg = 'Authentication failed: ' + (data.error || 'Unknown error');
+                    document.getElementById('status').innerHTML =
+                        '<p style="color: red;">' + errorMsg + '</p>';
+
+                    // Notify parent of error
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            type: 'udemy_auth_error',
+                            error: data.error || 'Unknown error'
+                        }, window.location.origin);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('status').innerHTML =
+                    '<p style="color: red;">Network error occurred</p>';
+            });
+        }
+
+        function getCsrfToken() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'csrftoken') {
+                    return decodeURIComponent(value);
+                }
+            }
+            return '';
+        }
+
+        // Start the authentication process
+        document.addEventListener('DOMContentLoaded', function() {
+            // First, try to get token immediately
+            const immediateToken = getAccessToken();
+            if (immediateToken) {
+                processToken(immediateToken);
+                return;
+            }
+
+            // Set up network interception for future requests
+            interceptNetworkRequests();
+
+            // If we're on the actual Udemy login page, wait for user interaction
+            if (window.location.hostname.includes('udemy.com')) {
+                // We're on Udemy, monitor for login completion
+                let checkCount = 0;
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    const token = getAccessToken();
+
+                    if (token) {
+                        clearInterval(checkInterval);
+                        processToken(token);
+                    } else if (checkCount > 60) { // Stop after 1 minute
+                        clearInterval(checkInterval);
+                        document.getElementById('status').innerHTML =
+                            '<p style="color: orange;">Please complete your login on Udemy, then return to this page.</p>';
+                    }
+                }, 1000);
+            } else {
+                // We're on our callback URL, show instructions
+                setTimeout(() => {
+                    if (!getAccessToken()) {
+                        document.getElementById('status').innerHTML =
+                            '<p>Please complete your login on Udemy. This page will automatically detect when you\'re logged in.</p>' +
+                            '<p><a href="https://www.udemy.com/join/login-popup/" target="_blank">Click here if you need to login</a></p>';
+                    }
+                }, 3000);
+            }
+        });
+
+        // Listen for messages from parent window (if opened as popup)
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'udemy_token') {
+                processToken(event.data.token);
+            }
+        });
+    </script>
+</body>
+</html>

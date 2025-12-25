@@ -7,6 +7,7 @@ import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -46,6 +47,53 @@ class DownloadProgressConsumer(AsyncWebsocketConsumer):
 
         # Send current download status
         await self.send_current_status()
+
+    async def check_download_access(self) -> bool:
+        """
+        Check if user has access to the download.
+
+        Returns:
+            True if user has access
+        """
+        try:
+            from apps.downloads.models import DownloadTask
+            download_task = await database_sync_to_async(
+                DownloadTask.objects.filter(
+                    id=self.download_id,
+                    user=self.user
+                ).exists
+            )()
+            return download_task
+        except Exception as e:
+            logger.error(f"Error checking download access: {e}")
+            return False
+
+    async def send_current_status(self) -> None:
+        """
+        Send current download status to the client.
+        """
+        try:
+            from apps.downloads.models import DownloadTask
+            download_task = await database_sync_to_async(
+                DownloadTask.objects.get
+            )(id=self.download_id)
+
+            await self.send(text_data=json.dumps({
+                'type': 'download_status',
+                'download_id': str(download_task.id),
+                'status': download_task.status,
+                'progress_percentage': download_task.progress_percentage,
+                'downloaded_items': download_task.downloaded_items,
+                'total_items': download_task.total_items,
+                'download_speed': download_task.download_speed,
+                'error_message': download_task.error_message
+            }))
+        except Exception as e:
+            logger.error(f"Error sending current status: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Failed to get download status'
+            }))
 
     async def disconnect(self, close_code):
         """Handle WebSocket disconnect."""

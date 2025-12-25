@@ -18,6 +18,7 @@ urlpatterns = [
 
     # Udemy authentication - COMPLETE IMPLEMENTATION
     path('udemy-login/', views.UdemyLoginView.as_view(), name='udemy_login'),
+    path('udemy-callback/', views.UdemyCallbackView.as_view(), name='udemy_callback'),
     path('token-login/', views.TokenLoginView.as_view(), name='token_login'),
     path('test-connection/', views.TestConnectionView.as_view(), name='test_connection'),
     path('csrf-token/', views.CSRFTokenView.as_view(), name='csrf_token'),
